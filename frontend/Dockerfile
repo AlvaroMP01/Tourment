@@ -1,4 +1,4 @@
-FROM docker.io/library/node:20-alpine
+FROM mirror.gcr.io/library/node:20-alpine
 
 WORKDIR /app
 

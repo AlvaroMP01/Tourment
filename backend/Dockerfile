@@ -1,5 +1,5 @@
 # Imagen Python oficial
-FROM docker.io/library/python:3.9-slim
+FROM mirror.gcr.io/library/python:3.9-slim
 
 # Carpeta de trabajo
 WORKDIR /app

@@ -37,10 +37,10 @@ const Navbar = () => {
             </div>
             <div>
               <h1 className="text-2xl font-tungsten text-white tracking-wider">
-                VALORANT
+                TOURMENT
               </h1>
               <p className="text-xs text-valorant-light opacity-70 -mt-1">
-                TOURNAMENT PLATFORM
+                VALORANT TOURNAMENT PLATFORM
               </p>
             </div>
           </Link>
