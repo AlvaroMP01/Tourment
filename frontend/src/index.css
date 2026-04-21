@@ -1,0 +1,231 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-valorant-dark text-valorant-light font-din;
+    margin: 0;
+    padding: 0;
+    overflow-x: hidden;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    @apply font-tungsten tracking-wider;
+  }
+}
+
+@layer components {
+  /* Valorant-style button */
+  .btn-valorant {
+    @apply relative px-8 py-3 bg-valorant-red text-white font-bold uppercase tracking-wider
+           transition-all duration-300 overflow-hidden;
+    clip-path: polygon(
+      8px 0,
+      100% 0,
+      100% calc(100% - 8px),
+      calc(100% - 8px) 100%,
+      0 100%,
+      0 8px
+    );
+  }
+
+  .btn-valorant::before {
+    content: "";
+    @apply absolute inset-0 bg-white opacity-0 transition-opacity duration-300;
+  }
+
+  .btn-valorant:hover::before {
+    @apply opacity-10;
+  }
+
+  .btn-valorant:hover {
+    @apply shadow-lg;
+    box-shadow: 0 0 20px rgba(255, 70, 85, 0.6);
+  }
+
+  /* Valorant-style card */
+  .card-valorant {
+    @apply bg-valorant-dark-secondary border-2 border-valorant-dark-tertiary 
+           transition-all duration-300 overflow-hidden;
+    clip-path: polygon(
+      12px 0,
+      100% 0,
+      100% calc(100% - 12px),
+      calc(100% - 12px) 100%,
+      0 100%,
+      0 12px
+    );
+  }
+
+  .card-valorant:hover {
+    @apply border-valorant-red;
+    box-shadow: 0 0 30px rgba(255, 70, 85, 0.3);
+  }
+
+  /* Valorant-style input */
+  .input-valorant {
+    @apply bg-valorant-dark-tertiary border-2 border-valorant-dark-tertiary 
+           text-valorant-light px-4 py-3 outline-none transition-all duration-300;
+    clip-path: polygon(
+      8px 0,
+      100% 0,
+      100% calc(100% - 8px),
+      calc(100% - 8px) 100%,
+      0 100%,
+      0 8px
+    );
+  }
+
+  .input-valorant:focus {
+    @apply border-valorant-red;
+    box-shadow: 0 0 15px rgba(255, 70, 85, 0.3);
+  }
+
+  /* Glowing text effect */
+  .text-glow {
+    text-shadow:
+      0 0 10px rgba(255, 70, 85, 0.8),
+      0 0 20px rgba(255, 70, 85, 0.6),
+      0 0 30px rgba(255, 70, 85, 0.4);
+  }
+
+  /* Animated background */
+  .bg-animated {
+    background: linear-gradient(135deg, #0f1923 0%, #1c252e 50%, #0f1923 100%);
+    background-size: 200% 200%;
+    animation: gradientShift 15s ease infinite;
+  }
+
+  @keyframes gradientShift {
+    0% {
+      background-position: 0% 50%;
+    }
+    50% {
+      background-position: 100% 50%;
+    }
+    100% {
+      background-position: 0% 50%;
+    }
+  }
+
+  /* Geometric pattern overlay */
+  .pattern-overlay {
+    position: relative;
+  }
+
+  .pattern-overlay::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background-image:
+      linear-gradient(45deg, rgba(255, 70, 85, 0.03) 25%, transparent 25%),
+      linear-gradient(-45deg, rgba(255, 70, 85, 0.03) 25%, transparent 25%),
+      linear-gradient(45deg, transparent 75%, rgba(255, 70, 85, 0.03) 75%),
+      linear-gradient(-45deg, transparent 75%, rgba(255, 70, 85, 0.03) 75%);
+    background-size: 40px 40px;
+    background-position:
+      0 0,
+      0 20px,
+      20px -20px,
+      -20px 0px;
+    pointer-events: none;
+  }
+
+  /* Status badges */
+  .badge-live {
+    @apply bg-valorant-red text-white px-3 py-1 text-xs font-bold uppercase;
+    animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  }
+
+  .badge-upcoming {
+    @apply bg-valorant-gold text-valorant-dark px-3 py-1 text-xs font-bold uppercase;
+  }
+
+  .badge-completed {
+    @apply bg-valorant-dark-tertiary text-valorant-light px-3 py-1 text-xs font-bold uppercase;
+  }
+
+  /* Divider with glow */
+  .divider-glow {
+    @apply h-px bg-gradient-to-r from-transparent via-valorant-red to-transparent;
+    box-shadow: 0 0 10px rgba(255, 70, 85, 0.5);
+  }
+
+  /* Loading spinner */
+  .spinner {
+    border: 3px solid rgba(255, 70, 85, 0.1);
+    border-top: 3px solid #ff4655;
+    border-radius: 50%;
+    width: 40px;
+    height: 40px;
+    animation: spin 1s linear infinite;
+  }
+
+  @keyframes spin {
+    0% {
+      transform: rotate(0deg);
+    }
+    100% {
+      transform: rotate(360deg);
+    }
+  }
+
+  /* Scrollbar styling */
+  ::-webkit-scrollbar {
+    width: 10px;
+  }
+
+  ::-webkit-scrollbar-track {
+    @apply bg-valorant-dark;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    @apply bg-valorant-red;
+    border-radius: 5px;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    @apply bg-valorant-accent;
+  }
+}
+
+@layer utilities {
+  .clip-corner {
+    clip-path: polygon(
+      12px 0,
+      100% 0,
+      100% calc(100% - 12px),
+      calc(100% - 12px) 100%,
+      0 100%,
+      0 12px
+    );
+  }
+
+  .clip-corner-sm {
+    clip-path: polygon(
+      8px 0,
+      100% 0,
+      100% calc(100% - 8px),
+      calc(100% - 8px) 100%,
+      0 100%,
+      0 8px
+    );
+  }
+
+  .clip-corner-lg {
+    clip-path: polygon(
+      20px 0,
+      100% 0,
+      100% calc(100% - 20px),
+      calc(100% - 20px) 100%,
+      0 100%,
+      0 20px
+    );
+  }
+}
