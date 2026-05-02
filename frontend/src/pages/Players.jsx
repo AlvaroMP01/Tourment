@@ -1,38 +1,78 @@
-import { useState } from 'react';
-import { mockPlayers } from '../data/mockData';
+import { useState, useEffect, useMemo } from 'react';
+import { routesAPI } from '../services/routesAPI';
+
+const ROLE_FILTERS = ['all', 'Duelist', 'Controller', 'Initiator', 'Sentinel'];
+
+const computeKD = (kills, deaths) => {
+  if (!deaths || deaths === 0) return kills || 0;
+  return (kills || 0) / deaths;
+};
 
 const Players = () => {
+  const [players, setPlayers] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
   const [roleFilter, setRoleFilter] = useState('all');
 
-  const filteredPlayers = mockPlayers.filter((player) => {
-    const matchesSearch = player.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         player.team.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesRole = roleFilter === 'all' || player.role === roleFilter;
-    return matchesSearch && matchesRole;
-  });
+  useEffect(() => {
+    let cancelled = false;
+    const load = async () => {
+      try {
+        const data = await routesAPI.getPlayers();
+        if (!cancelled) setPlayers(data || []);
+      } catch (err) {
+        if (!cancelled) setError(err.message || 'No se pudieron cargar los jugadores');
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    };
+    load();
+    return () => { cancelled = true; };
+  }, []);
 
-  const roles = ['all', 'Duelist', 'Controller', 'Initiator', 'Sentinel'];
+  const ranked = useMemo(() => {
+    // El backend ya viene ordenado por matches_played desc, kills desc.
+    // Asignamos un rank visual sobre ese orden.
+    return players.map((p, idx) => ({ ...p, rank: idx + 1 }));
+  }, [players]);
+
+  const filtered = useMemo(() => {
+    const search = searchTerm.toLowerCase();
+    return ranked.filter((p) => {
+      const teamName = p.team?.team_name || '';
+      const matchesSearch =
+        p.nickname.toLowerCase().includes(search) ||
+        teamName.toLowerCase().includes(search);
+      const matchesRole = roleFilter === 'all' || p.team?.ingame_role === roleFilter;
+      return matchesSearch && matchesRole;
+    });
+  }, [ranked, searchTerm, roleFilter]);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-valorant-dark flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-valorant-red"></div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-valorant-dark py-12">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        {/* Header */}
         <div className="mb-12">
-          <h1 className="text-6xl font-tungsten text-white tracking-wider mb-4">
-            JUGADORES
-          </h1>
+          <h1 className="text-6xl font-tungsten text-white tracking-wider mb-4">JUGADORES</h1>
           <div className="h-1 w-32 bg-valorant-red mb-4"></div>
-          <p className="text-valorant-light text-lg">
-            Estadísticas y rankings de los mejores jugadores
-          </p>
+          <p className="text-valorant-light text-lg">Estadísticas y rankings de los mejores jugadores</p>
         </div>
 
-        {/* Filters */}
+        {error && (
+          <div className="bg-red-500/20 border border-valorant-red p-4 mb-6 text-center text-red-400">{error}</div>
+        )}
+
         <div className="mb-8 flex flex-col md:flex-row gap-4 justify-between items-center">
-          {/* Role Filters */}
           <div className="flex gap-2 flex-wrap">
-            {roles.map((role) => (
+            {ROLE_FILTERS.map((role) => (
               <button
                 key={role}
                 onClick={() => setRoleFilter(role)}
@@ -47,7 +87,6 @@ const Players = () => {
             ))}
           </div>
 
-          {/* Search */}
           <input
             type="text"
             placeholder="Buscar jugadores..."
@@ -57,15 +96,12 @@ const Players = () => {
           />
         </div>
 
-        {/* Leaderboard */}
         <div className="card-valorant overflow-hidden">
           <div className="bg-valorant-dark-tertiary p-4">
-            <h2 className="text-2xl font-tungsten text-white tracking-wider">
-              TABLA DE CLASIFICACIÓN
-            </h2>
+            <h2 className="text-2xl font-tungsten text-white tracking-wider">TABLA DE CLASIFICACIÓN</h2>
           </div>
 
-          {filteredPlayers.length > 0 ? (
+          {filtered.length > 0 ? (
             <div className="overflow-x-auto">
               <table className="w-full">
                 <thead className="bg-valorant-dark-secondary">
@@ -79,79 +115,68 @@ const Players = () => {
                     <th className="p-4 text-center">ADR</th>
                     <th className="p-4 text-center">HS%</th>
                     <th className="p-4 text-center">Clutches</th>
+                    <th className="p-4 text-center">Partidos</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredPlayers.map((player, index) => (
-                    <tr
-                      key={player.id}
-                      className="border-b border-valorant-dark-tertiary hover:bg-valorant-dark-secondary transition-colors"
-                    >
-                      <td className="p-4">
-                        <div className="flex items-center">
+                  {filtered.map((p) => {
+                    const kd = computeKD(p.stats.kills, p.stats.deaths);
+                    return (
+                      <tr key={p.id} className="border-b border-valorant-dark-tertiary hover:bg-valorant-dark-secondary transition-colors">
+                        <td className="p-4">
                           <span className={`text-2xl font-tungsten ${
-                            player.rank === 1 ? 'text-valorant-gold' :
-                            player.rank === 2 ? 'text-gray-400' :
-                            player.rank === 3 ? 'text-orange-600' :
+                            p.rank === 1 ? 'text-valorant-gold' :
+                            p.rank === 2 ? 'text-gray-400' :
+                            p.rank === 3 ? 'text-orange-600' :
                             'text-white'
                           }`}>
-                            #{player.rank}
+                            #{p.rank}
                           </span>
-                        </div>
-                      </td>
-                      <td className="p-4">
-                        <span className="text-white font-bold">{player.name}</span>
-                      </td>
-                      <td className="p-4">
-                        <span className="text-valorant-light">{player.team}</span>
-                      </td>
-                      <td className="p-4">
-                        <span className="text-valorant-red text-sm font-bold">
-                          {player.role}
-                        </span>
-                      </td>
-                      <td className="p-4">
-                        <span className="text-valorant-light">{player.mainAgent}</span>
-                      </td>
-                      <td className="p-4 text-center">
-                        <span className={`font-bold ${
-                          player.stats.kd >= 1.3 ? 'text-valorant-red' :
-                          player.stats.kd >= 1.0 ? 'text-white' :
-                          'text-valorant-light'
-                        }`}>
-                          {player.stats.kd.toFixed(2)}
-                        </span>
-                      </td>
-                      <td className="p-4 text-center">
-                        <span className="text-white">{player.stats.adr}</span>
-                      </td>
-                      <td className="p-4 text-center">
-                        <span className="text-white">{player.stats.hs}</span>
-                      </td>
-                      <td className="p-4 text-center">
-                        <span className="text-valorant-gold font-bold">
-                          {player.stats.clutches}
-                        </span>
-                      </td>
-                    </tr>
-                  ))}
+                        </td>
+                        <td className="p-4"><span className="text-white font-bold">{p.nickname}</span></td>
+                        <td className="p-4">
+                          <span className="text-valorant-light">
+                            {p.team ? `${p.team.team_name} [${p.team.team_tag}]` : 'Sin equipo'}
+                          </span>
+                        </td>
+                        <td className="p-4">
+                          <span className="text-valorant-red text-sm font-bold">{p.team?.ingame_role || '—'}</span>
+                        </td>
+                        <td className="p-4">
+                          <span className="text-valorant-light">{p.team?.favorite_agent || '—'}</span>
+                        </td>
+                        <td className="p-4 text-center">
+                          <span className={`font-bold ${
+                            kd >= 1.3 ? 'text-valorant-red' :
+                            kd >= 1.0 ? 'text-white' :
+                            'text-valorant-light'
+                          }`}>
+                            {kd.toFixed(2)}
+                          </span>
+                        </td>
+                        <td className="p-4 text-center"><span className="text-white">{p.stats.adr.toFixed(1)}</span></td>
+                        <td className="p-4 text-center"><span className="text-white">{p.stats.hs_percentage.toFixed(1)}%</span></td>
+                        <td className="p-4 text-center"><span className="text-valorant-gold font-bold">{p.stats.clutches}</span></td>
+                        <td className="p-4 text-center"><span className="text-valorant-light">{p.stats.matches_played}</span></td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
           ) : (
             <div className="text-center py-20">
               <div className="text-6xl mb-4">🔍</div>
-              <h3 className="text-2xl font-tungsten text-white mb-2">
-                NO SE ENCONTRARON JUGADORES
-              </h3>
+              <h3 className="text-2xl font-tungsten text-white mb-2">NO SE ENCONTRARON JUGADORES</h3>
               <p className="text-valorant-light">
-                Intenta ajustar tus filtros de búsqueda
+                {players.length === 0
+                  ? 'Aún no hay jugadores con stats reportadas'
+                  : 'Intenta ajustar tus filtros de búsqueda'}
               </p>
             </div>
           )}
         </div>
 
-        {/* Stats Legend */}
         <div className="mt-8 grid grid-cols-2 md:grid-cols-4 gap-4">
           <div className="card-valorant p-4">
             <div className="text-xs text-valorant-light uppercase mb-1">K/D</div>

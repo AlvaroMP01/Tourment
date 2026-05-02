@@ -1,30 +1,34 @@
 import { useState, useEffect } from 'react';
 import NewsCard from '../components/NewsCard';
 import LoadingSpinner from '../components/LoadingSpinner';
-import vlrApi from '../services/vlrApi';
-import { mockNews } from '../data/mockData';
+import { routesAPI } from '../services/routesAPI';
 
 const News = () => {
   const [vlrNews, setVlrNews] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('all');
+  const [error, setError] = useState('');
 
   useEffect(() => {
     const fetchNews = async () => {
-      const news = await vlrApi.getNews();
-      setVlrNews(news);
-      setLoading(false);
+      try {
+        const news = await routesAPI.getNews();
+        setVlrNews(Array.isArray(news) ? news : []);
+      } catch (e) {
+        console.error('Error fetching news:', e);
+        setError(e?.message || 'No se pudieron cargar las noticias.');
+        setVlrNews([]);
+      } finally {
+        setLoading(false);
+      }
     };
 
     fetchNews();
   }, []);
 
-  // Use VLR news if available, otherwise use mock data
-  const newsToDisplay = vlrNews.length > 0 ? vlrNews : mockNews;
-
   const filteredNews = filter === 'all' 
-    ? newsToDisplay 
-    : newsToDisplay.filter(n => n.category === filter);
+    ? vlrNews
+    : vlrNews.filter(n => n.category === filter);
 
   const categories = ['all', 'Noticias', 'Resultados', 'Actualizaciones'];
 
@@ -62,22 +66,30 @@ const News = () => {
         {/* News Grid */}
         {loading ? (
           <LoadingSpinner size="lg" />
+        ) : error ? (
+          <div className="text-center py-20">
+            <div className="text-6xl mb-4">📰</div>
+            <h3 className="text-2xl font-tungsten text-white mb-2">
+              NO SE PUDIERON CARGAR LAS NOTICIAS
+            </h3>
+            <p className="text-valorant-light">
+              {error}
+            </p>
+          </div>
         ) : filteredNews.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {filteredNews.map((news, index) => (
               <NewsCard
                 key={news.id || index}
+                index={index}
                 news={{
                   id: news.id || index,
                   title: news.title,
                   description: news.description || news.desc,
                   date: news.date,
-                  image: news.image || news.urlToImage || mockNews[index % mockNews.length]?.image,
                   category: news.category || 'Noticias',
                   author: news.author,
-                  url: news.url_path
-                    ? (news.url_path.startsWith('http') ? news.url_path : `https://vlr.gg${news.url_path}`)
-                    : (news.url || '#')
+                  link: news.link || news.url || '#',
                 }}
               />
             ))}
@@ -94,18 +106,18 @@ const News = () => {
           </div>
         )}
 
-        {/* VLR.gg Attribution */}
+        {/* RSS Attribution */}
         {vlrNews.length > 0 && (
           <div className="mt-12 text-center">
             <p className="text-valorant-light text-sm">
               Noticias proporcionadas por{' '}
               <a
-                href="https://www.vlr.gg"
+                href="https://www.vlr.gg/"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-valorant-red hover:text-white transition-colors font-bold"
               >
-                VLR.gg
+                VLR.gg (RSS)
               </a>
             </p>
           </div>

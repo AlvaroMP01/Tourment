@@ -1,37 +1,48 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
+import { useAuth } from '../context/AuthContext';
 import AdminTournaments from '../components/admin/AdminTournaments';
 import AdminTeams from '../components/admin/AdminTeams';
 import AdminMatches from '../components/admin/AdminMatches';
-import AdminPlayers from '../components/admin/AdminPlayers';
 import AdminUsers from '../components/admin/AdminUsers';
 
-const Admin = () => {
-  const [activeSection, setActiveSection] = useState('tournaments');
+// Cada sección declara qué roles pueden verla.
+const ALL_SECTIONS = [
+  { id: 'tournaments', name: 'Torneos', icon: '🏆', allowedRoles: ['admin', 'tournament_manager'], Component: AdminTournaments },
+  { id: 'matches',     name: 'Partidos', icon: '⚔️', allowedRoles: ['admin', 'tournament_manager'], Component: AdminMatches },
+  { id: 'teams',       name: 'Equipos',  icon: '👥', allowedRoles: ['admin'],                       Component: AdminTeams },
+  { id: 'users',       name: 'Usuarios', icon: '👤', allowedRoles: ['admin'],                       Component: AdminUsers },
+];
 
-  const sections = [
-    { id: 'tournaments', name: 'Torneos', icon: '🏆' },
-    { id: 'teams', name: 'Equipos', icon: '👥' },
-    { id: 'matches', name: 'Partidos', icon: '⚔️' },
-    { id: 'users', name: 'Jugadores', icon: '🎮' },
-    { id: 'system_users', name: 'Usuarios', icon: '👤' },
-  ];
+const Admin = () => {
+  const { user } = useAuth();
+
+  const sections = useMemo(
+    () => ALL_SECTIONS.filter(s => s.allowedRoles.includes(user?.role)),
+    [user?.role]
+  );
+
+  const [activeSection, setActiveSection] = useState(sections[0]?.id);
+  const ActiveComponent = sections.find(s => s.id === activeSection)?.Component;
+
+  const headerTitle = user?.role === 'admin'
+    ? 'PANEL DE ADMINISTRACIÓN'
+    : 'PANEL DE GESTIÓN';
+  const headerSubtitle = user?.role === 'admin'
+    ? 'Gestiona torneos, equipos y usuarios de la plataforma'
+    : 'Gestiona los torneos y partidos del sistema';
 
   return (
     <div className="min-h-screen bg-valorant-dark py-12">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        {/* Header */}
         <div className="mb-12">
           <h1 className="text-6xl font-tungsten text-white tracking-wider mb-4">
-            PANEL DE ADMINISTRACIÓN
+            {headerTitle}
           </h1>
           <div className="h-1 w-32 bg-valorant-red mb-4"></div>
-          <p className="text-valorant-light text-lg">
-            Gestiona torneos, equipos y usuarios de la plataforma
-          </p>
+          <p className="text-valorant-light text-lg">{headerSubtitle}</p>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-          {/* Sidebar */}
           <div className="lg:col-span-1">
             <div className="card-valorant p-4 space-y-2">
               {sections.map((section) => (
@@ -51,14 +62,13 @@ const Admin = () => {
             </div>
           </div>
 
-          {/* Main Content */}
           <div className="lg:col-span-3">
             <div className="card-valorant p-8">
-              {activeSection === 'tournaments' && <AdminTournaments />}
-              {activeSection === 'teams' && <AdminTeams />}
-              {activeSection === 'matches' && <AdminMatches />}
-              {activeSection === 'users' && <AdminPlayers />}
-              {activeSection === 'system_users' && <AdminUsers />}
+              {ActiveComponent ? <ActiveComponent /> : (
+                <div className="text-center text-valorant-light py-8">
+                  No tenés acceso a esta sección.
+                </div>
+              )}
             </div>
           </div>
         </div>

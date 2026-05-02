@@ -1,18 +1,26 @@
 import { createPortal } from 'react-dom';
 
-const Modal = ({ isOpen, onClose, title, children }) => {
+const SIZE_CLASS = {
+  md: 'max-w-2xl',
+  lg: 'max-w-4xl',
+  xl: 'max-w-6xl',
+};
+
+const Modal = ({ isOpen, onClose, title, children, size = 'md' }) => {
   if (!isOpen) return null;
+
+  const sizeClass = SIZE_CLASS[size] || SIZE_CLASS.md;
 
   return createPortal(
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
       {/* Overlay */}
-      <div 
+      <div
         className="absolute inset-0 bg-black/70 backdrop-blur-sm"
         onClick={onClose}
       ></div>
-      
+
       {/* Modal Content */}
-      <div className="relative w-full max-w-2xl bg-valorant-dark border-2 border-valorant-red clip-corner-sm shadow-2xl z-10">
+      <div className={`relative w-full ${sizeClass} bg-valorant-dark border-2 border-valorant-red clip-corner-sm shadow-2xl z-10`}>
         {/* Header */}
         <div className="flex justify-between items-center p-6 border-b border-valorant-dark-tertiary">
           <h2 className="text-3xl font-tungsten text-white tracking-wider">

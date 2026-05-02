@@ -1,62 +1,67 @@
-import { createContext, useState, useContext, useEffect } from 'react';
+import React, { createContext, useState, useContext, useEffect } from 'react';
+import { routesAPI } from '../services/routesAPI';
 
 const AuthContext = createContext(null);
 
 export const AuthProvider = ({ children }) => {
-  const [user, setUser] = useState(() => {
-    const savedUser = localStorage.getItem('user');
-    return savedUser ? JSON.parse(savedUser) : null;
-  });
+  const [user, setUser] = useState(null);
+  const [token, setToken] = useState(localStorage.getItem('token'));
+  const [loading, setLoading] = useState(true);
 
-  const register = (username, password) => {
-    const usersStr = localStorage.getItem('usersDB');
-    let usersDB = usersStr ? JSON.parse(usersStr) : [];
-    
-    // Check if user already exists
-    if (usersDB.find(u => u.username === username) || username === 'admin') {
-      return { success: false, error: 'El usuario ya existe' };
-    }
-
-    const newUser = { username, password, role: 'user' };
-    usersDB.push(newUser);
-    localStorage.setItem('usersDB', JSON.stringify(usersDB));
-    
-    // Auto login after registration
-    setUser({ username: newUser.username, role: newUser.role });
-    localStorage.setItem('user', JSON.stringify({ username: newUser.username, role: newUser.role }));
-    return { success: true };
+  const normalizeUser = (u) => {
+    if (!u) return null;
+    // Compatibilidad: backend ahora usa `role`, el frontend históricamente usaba `role`
+    return { ...u, role: u.role ?? u.role };
   };
 
-  const login = (username, password) => {
-    if (username === 'admin' && password === 'admin') {
-      const adminUser = { username: 'admin', role: 'admin' };
-      setUser(adminUser);
-      localStorage.setItem('user', JSON.stringify(adminUser));
-      return true;
-    }
-    
-    const usersStr = localStorage.getItem('usersDB');
-    const usersDB = usersStr ? JSON.parse(usersStr) : [];
-    
-    const foundUser = usersDB.find(u => u.username === username && u.password === password);
-    if (foundUser) {
-      const sessionUser = { username: foundUser.username, role: foundUser.role };
-      setUser(sessionUser);
-      localStorage.setItem('user', JSON.stringify(sessionUser));
-      return true;
-    }
+  useEffect(() => {
+    const loadUser = async () => {
+      if (token) {
+        try {
+          const userData = await routesAPI.getMe(token);
+          setUser(normalizeUser(userData));
+        } catch (error) {
+          console.error("Error recuperando usuario:", error);
+          logout();
+        }
+      }
+      setLoading(false);
+    };
 
-    return false;
+    loadUser();
+  }, [token]);
+
+  const login = async (credentials) => {
+    const data = await routesAPI.login(credentials);
+    setToken(data.token);
+    setUser(normalizeUser(data.user));
+    localStorage.setItem('token', data.token);
+    return data;
+  };
+
+  const register = async (userData) => {
+    return await routesAPI.register(userData);
   };
 
   const logout = () => {
+    setToken(null);
     setUser(null);
-    localStorage.removeItem('user');
+    localStorage.removeItem('token');
+  };
+
+  const value = {
+    user,
+    token,
+    login,
+    register,
+    logout,
+    isAuthenticated: !!token,
+    loading
   };
 
   return (
-    <AuthContext.Provider value={{ user, login, logout, register }}>
-      {children}
+    <AuthContext.Provider value={value}>
+      {!loading && children}
     </AuthContext.Provider>
   );
 };
@@ -64,7 +69,7 @@ export const AuthProvider = ({ children }) => {
 export const useAuth = () => {
   const context = useContext(AuthContext);
   if (!context) {
-    throw new Error('useAuth must be used within an AuthProvider');
+    throw new Error('useAuth debe usarse dentro de un AuthProvider');
   }
   return context;
 };

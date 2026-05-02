@@ -3,19 +3,25 @@ import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 
 const Login = () => {
-  const [username, setUsername] = useState('');
+  const [nickname, setNickname] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
   const { login } = useAuth();
   const navigate = useNavigate();
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    const success = login(username, password);
-    if (success) {
-      navigate('/admin');
-    } else {
-      setError('Credenciales incorrectas. Intenta con admin/admin.');
+    setError('');
+    setLoading(true);
+
+    try {
+      await login({ nickname, password });
+      navigate('/');
+    } catch (err) {
+      setError(err.error || err.message || 'Credenciales incorrectas.');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -40,13 +46,13 @@ const Login = () => {
             )}
             <div>
               <label className="block text-sm font-bold uppercase text-valorant-light mb-2">
-                Usuario
+                Nickname
               </label>
               <input
                 type="text"
                 required
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
+                value={nickname}
+                onChange={(e) => setNickname(e.target.value)}
                 className="w-full bg-valorant-dark-secondary border border-valorant-dark-tertiary focus:border-valorant-red outline-none p-3 text-white transition-colors clip-corner-sm"
               />
             </div>
@@ -67,9 +73,10 @@ const Login = () => {
             <div>
               <button
                 type="submit"
-                className="w-full btn-valorant justify-center"
+                disabled={loading}
+                className={`w-full btn-valorant justify-center ${loading ? 'opacity-50 cursor-not-allowed' : ''}`}
               >
-                ENTRAR
+                {loading ? 'ENTRANDO...' : 'ENTRAR'}
               </button>
             </div>
             

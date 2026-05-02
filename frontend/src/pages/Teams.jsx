@@ -1,58 +1,95 @@
-import { useState } from 'react';
+import { useState, useEffect, useMemo } from 'react';
+import { routesAPI } from '../services/routesAPI';
 import TeamCard from '../components/TeamCard';
-import { mockTeams } from '../data/mockData';
 
 const Teams = () => {
+  const [teams, setTeams] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedRegion, setSelectedRegion] = useState('all');
-  const [sortBy, setSortBy] = useState('rank');
   const [availability, setAvailability] = useState('all');
+  const [sortBy, setSortBy] = useState('name');
 
-  const uniqueRegions = [...new Set(mockTeams.map(t => t.region))];
+  useEffect(() => {
+    const load = async () => {
+      try {
+        const data = await routesAPI.getTeams();
+        setTeams(data);
+      } catch (err) {
+        setError(err.message || 'No se pudieron cargar los equipos');
+      } finally {
+        setLoading(false);
+      }
+    };
+    load();
+  }, []);
 
-  const filteredTeams = mockTeams.filter((team) => {
-    const matchesSearch = team.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                          team.tag.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                          team.region.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesRegion = selectedRegion === 'all' || team.region === selectedRegion;
-    const matchesAvailability = availability === 'all' || 
-                                (availability === 'available' && team.players.length < 5) || 
-                                (availability === 'full' && team.players.length >= 5);
-    return matchesSearch && matchesRegion && matchesAvailability;
-  });
+  const uniqueRegions = useMemo(
+    () => [...new Set(teams.map(t => t.region).filter(Boolean))],
+    [teams]
+  );
 
-  const sortedTeams = [...filteredTeams].sort((a, b) => {
-    if (sortBy === 'wins') return b.wins - a.wins;
-    if (sortBy === 'winrate') {
-      const wrA = a.wins / (a.wins + a.losses || 1);
-      const wrB = b.wins / (b.wins + b.losses || 1);
-      return wrB - wrA;
+  const filteredTeams = useMemo(() => {
+    const search = searchTerm.toLowerCase();
+    return teams.filter(team => {
+      const matchesSearch =
+        team.name.toLowerCase().includes(search) ||
+        (team.tag || '').toLowerCase().includes(search) ||
+        (team.region || '').toLowerCase().includes(search);
+      const matchesRegion = selectedRegion === 'all' || team.region === selectedRegion;
+      const memberCount = team.member_count ?? 0;
+      const matchesAvailability =
+        availability === 'all' ||
+        (availability === 'available' && memberCount < 7) ||
+        (availability === 'full' && memberCount >= 7);
+      return matchesSearch && matchesRegion && matchesAvailability;
+    });
+  }, [teams, searchTerm, selectedRegion, availability]);
+
+  const sortedTeams = useMemo(() => {
+    const arr = [...filteredTeams];
+    if (sortBy === 'members') {
+      arr.sort((a, b) => (b.member_count ?? 0) - (a.member_count ?? 0));
+    } else {
+      arr.sort((a, b) => a.name.localeCompare(b.name));
     }
-    return a.rank - b.rank; // default
-  });
+    return arr;
+  }, [filteredTeams, sortBy]);
+
+  const totalMembers = teams.reduce((acc, t) => acc + (t.member_count ?? 0), 0);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-valorant-dark flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-valorant-red"></div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-valorant-dark py-12">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        {/* Header */}
         <div className="mb-12">
-          <h1 className="text-6xl font-tungsten text-white tracking-wider mb-4">
-            EQUIPOS
-          </h1>
+          <h1 className="text-6xl font-tungsten text-white tracking-wider mb-4">EQUIPOS</h1>
           <div className="h-1 w-32 bg-valorant-red mb-4"></div>
-          <p className="text-valorant-light text-lg">
-            Descubre los mejores equipos de VALORANT en España
-          </p>
+          <p className="text-valorant-light text-lg">Descubre los equipos de la plataforma</p>
         </div>
 
-        {/* Search and Filters */}
+        {error && (
+          <div className="bg-red-500/20 border border-valorant-red p-4 mb-6 text-center text-red-400">
+            {error}
+          </div>
+        )}
+
         <div className="mb-8 flex flex-col md:flex-row gap-4">
           <input
             type="text"
-            placeholder="Buscar equipos por nombre, tag o región..."
+            placeholder="Buscar por nombre, tag o región..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="input-valorant flex-grow"
+            className="flex-grow bg-valorant-dark-secondary border border-valorant-dark focus:border-valorant-red outline-none p-3 text-white"
           />
           <select
             className="bg-valorant-dark border border-valorant-red/30 text-white p-3 font-bold uppercase focus:border-valorant-red focus:outline-none transition-colors"
@@ -60,9 +97,7 @@ const Teams = () => {
             onChange={(e) => setSelectedRegion(e.target.value)}
           >
             <option value="all">Todas las Regiones</option>
-            {uniqueRegions.map(r => (
-              <option key={r} value={r}>{r}</option>
-            ))}
+            {uniqueRegions.map(r => <option key={r} value={r}>{r}</option>)}
           </select>
           <select
             className="bg-valorant-dark border border-valorant-red/30 text-white p-3 font-bold uppercase focus:border-valorant-red focus:outline-none transition-colors"
@@ -70,72 +105,43 @@ const Teams = () => {
             onChange={(e) => setAvailability(e.target.value)}
           >
             <option value="all">Cualquier Estado</option>
-            <option value="available">Buscan Jugadores</option>
-            <option value="full">Equipos Completos</option>
+            <option value="available">Reclutando</option>
+            <option value="full">Completos</option>
           </select>
           <select
             className="bg-valorant-dark border border-valorant-red/30 text-white p-3 font-bold uppercase focus:border-valorant-red focus:outline-none transition-colors"
             value={sortBy}
             onChange={(e) => setSortBy(e.target.value)}
           >
-            <option value="rank">Por Ranking</option>
-            <option value="wins">Por Victorias</option>
-            <option value="winrate">Por Win Rate</option>
+            <option value="name">Por Nombre</option>
+            <option value="members">Por Miembros</option>
           </select>
         </div>
 
-        {/* Stats Overview */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-8">
           <div className="card-valorant p-6 text-center">
-            <div className="text-3xl font-tungsten text-valorant-red mb-2">
-              {mockTeams.length}
-            </div>
-            <div className="text-sm text-valorant-light uppercase">
-              Equipos Registrados
-            </div>
+            <div className="text-3xl font-tungsten text-valorant-red mb-2">{teams.length}</div>
+            <div className="text-sm text-valorant-light uppercase">Equipos Registrados</div>
           </div>
           <div className="card-valorant p-6 text-center">
-            <div className="text-3xl font-tungsten text-valorant-red mb-2">
-              {mockTeams.reduce((acc, team) => acc + team.players.length, 0)}
-            </div>
-            <div className="text-sm text-valorant-light uppercase">
-              Jugadores Activos
-            </div>
+            <div className="text-3xl font-tungsten text-valorant-red mb-2">{totalMembers}</div>
+            <div className="text-sm text-valorant-light uppercase">Miembros Activos</div>
           </div>
           <div className="card-valorant p-6 text-center">
-            <div className="text-3xl font-tungsten text-valorant-red mb-2">
-              {mockTeams.reduce((acc, team) => acc + team.wins, 0)}
-            </div>
-            <div className="text-sm text-valorant-light uppercase">
-              Victorias Totales
-            </div>
-          </div>
-          <div className="card-valorant p-6 text-center">
-            <div className="text-3xl font-tungsten text-valorant-red mb-2">
-              España
-            </div>
-            <div className="text-sm text-valorant-light uppercase">
-              Región Principal
-            </div>
+            <div className="text-3xl font-tungsten text-valorant-red mb-2">{uniqueRegions.length}</div>
+            <div className="text-sm text-valorant-light uppercase">Regiones</div>
           </div>
         </div>
 
-        {/* Teams Grid */}
         {sortedTeams.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {sortedTeams.map((team) => (
-              <TeamCard key={team.id} team={team} />
-            ))}
+            {sortedTeams.map((team) => <TeamCard key={team.id} team={team} />)}
           </div>
         ) : (
           <div className="text-center py-20">
             <div className="text-6xl mb-4">🔍</div>
-            <h3 className="text-2xl font-tungsten text-white mb-2">
-              NO SE ENCONTRARON EQUIPOS
-            </h3>
-            <p className="text-valorant-light">
-              Intenta ajustar tu búsqueda
-            </p>
+            <h3 className="text-2xl font-tungsten text-white mb-2">NO SE ENCONTRARON EQUIPOS</h3>
+            <p className="text-valorant-light">Intenta ajustar tu búsqueda</p>
           </div>
         )}
       </div>

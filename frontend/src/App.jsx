@@ -17,11 +17,10 @@ import { useAuth } from './context/AuthContext';
 import ProtectedRoute from './components/ProtectedRoute';
 import { Navigate } from 'react-router-dom';
 
-// Un componente simple para rutas que solo Admins pueden ver
-// Podríamos crear un AdminRoute más complejo, pero esto es un buen comienzo
-const AdminRoute = ({ children }) => {
+// Restringe a una lista de roles. Default: solo admin.
+const RoleRoute = ({ children, allowedRoles = ['admin'] }) => {
   const { user } = useAuth();
-  if (!user || user.role !== 'admin') {
+  if (!user || !allowedRoles.includes(user.role)) {
     return <Navigate to="/" replace />;
   }
   return children;
@@ -61,12 +60,12 @@ function App() {
               </ProtectedRoute>
             } />
 
-            {/* Rutas de Admin (Solo Admin) */}
+            {/* Panel de gestión (admin Y tournament_manager — la UI filtra qué secciones se muestran) */}
             <Route path="/admin" element={
               <ProtectedRoute>
-                <AdminRoute>
+                <RoleRoute allowedRoles={['admin', 'tournament_manager']}>
                   <Admin />
-                </AdminRoute>
+                </RoleRoute>
               </ProtectedRoute>
             } />
 

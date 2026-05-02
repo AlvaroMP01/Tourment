@@ -19,8 +19,11 @@ const Navbar = () => {
     navItems.push({ name: 'Mis Equipos', path: '/my-teams' });
   }
 
-  if (user?.role === 'admin') {
-    navItems.push({ name: 'Admin', path: '/admin' });
+  if (user?.role === 'admin' || user?.role === 'tournament_manager') {
+    navItems.push({
+      name: user.role === 'admin' ? 'Admin' : 'Gestión',
+      path: '/admin'
+    });
   }
 
 
@@ -71,7 +74,7 @@ const Navbar = () => {
                 to="/profile"
                 className={`ml-4 px-4 py-2 font-bold uppercase text-sm tracking-wider transition-all duration-300 clip-corner-sm flex items-center gap-2 ${isActive('/profile') ? 'bg-valorant-red text-white' : 'border border-valorant-red text-valorant-red hover:bg-valorant-red hover:text-white'}`}
               >
-                <span className="text-base"></span> {user.username}
+                <span className="text-base">Test</span>
               </Link>
             ) : (
               <Link

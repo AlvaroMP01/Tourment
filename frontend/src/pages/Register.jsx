@@ -3,32 +3,41 @@ import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 
 const Register = () => {
-  const [username, setUsername] = useState('');
+  const [nickname, setNickname] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [role, setRol] = useState('player');
   const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
   const { register } = useAuth();
   const navigate = useNavigate();
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
+    setLoading(true);
 
     if (password !== confirmPassword) {
       setError('Las contraseñas no coinciden.');
+      setLoading(false);
       return;
     }
 
-    if (password.length < 4) {
-      setError('La contraseña debe tener al menos 4 caracteres.');
+    if (password.length < 8) {
+      setError('La contraseña debe tener al menos 8 caracteres.');
+      setLoading(false);
       return;
     }
 
-    const result = register(username, password);
-    if (result.success) {
-      navigate('/');
-    } else {
-      setError(result.error || 'Error al crear la cuenta.');
+    try {
+      await register({ nickname, password, role });
+      // Si el registro es exitoso, mandamos al usuario al login
+      navigate('/login');
+    } catch (err) {
+      // El error viene de routesAPI.register (error.message o error.error)
+      setError(err.error || err.message || 'Error al crear la cuenta.');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -53,13 +62,13 @@ const Register = () => {
             )}
             <div>
               <label className="block text-sm font-bold uppercase text-valorant-light mb-2">
-                Usuario
+                Nickname
               </label>
               <input
                 type="text"
                 required
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
+                value={nickname}
+                onChange={(e) => setNickname(e.target.value)}
                 className="w-full bg-valorant-dark-secondary border border-valorant-dark-tertiary focus:border-valorant-red outline-none p-3 text-white transition-colors clip-corner-sm"
               />
             </div>
@@ -91,11 +100,30 @@ const Register = () => {
             </div>
 
             <div>
+              <label className="block text-sm font-bold uppercase text-valorant-light mb-2">
+                Tu role Inicial
+              </label>
+              <select
+                value={role}
+                onChange={(e) => setRol(e.target.value)}
+                className="w-full bg-valorant-dark-secondary border border-valorant-dark-tertiary focus:border-valorant-red outline-none p-3 text-white transition-colors clip-corner-sm"
+              >
+                <option value="player">Jugador (Puede unirse a equipos)</option>
+                <option value="coach">Coach (Crea su propio equipo)</option>
+                <option value="player_coach">Jugador/Coach (Crea su equipo y juega en él)</option>
+              </select>
+              <p className="text-[10px] text-valorant-light mt-2 uppercase opacity-70">
+                * Los roles de Coach y Player/Coach no podrán unirse a otros equipos.
+              </p>
+            </div>
+
+            <div>
               <button
                 type="submit"
-                className="w-full btn-valorant justify-center"
+                disabled={loading}
+                className={`w-full btn-valorant justify-center ${loading ? 'opacity-50 cursor-not-allowed' : ''}`}
               >
-                CREAR CUENTA
+                {loading ? 'CREANDO...' : 'CREAR CUENTA'}
               </button>
             </div>
             
@@ -113,3 +141,4 @@ const Register = () => {
 };
 
 export default Register;
+
