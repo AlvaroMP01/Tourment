@@ -1,132 +1,127 @@
 # 🚀 Guía de Inicio Rápido - Valorant Tournament Platform
 
-## Prerequisitos
+## 📋 Prerequisitos
 
-- Docker Desktop instalado y en ejecución
-- Git (para clonar el repositorio)
+- **Docker & Docker Compose** (Para el modo rápido con todo incluido)
+- **Node.js & npm** (Para desarrollo rápido en el Frontend)
+- **Python 3.x & venv** (Para desarrollo rápido en el Backend)
+- **MySQL** (Si desarrollas de forma local sin Docker para el backend)
 
-## Pasos para Ejecutar
+---
 
-### 1. Navegar al Directorio del Proyecto
+## 🛠️ Métodos de Ejecución
+
+Tienes dos formas de trabajar: el método "Todo en Uno" (ideal para probar la aplicación completa) y el método "Modo Desarrollador" (ideal para cuando estás programando y quieres ver los cambios al instante).
+
+### 🐳 Método 1: Todo en Uno (Recomendado para Probar)
+Usa Docker para levantar la base de datos, el backend y el frontend con un solo comando.
 
 ```bash
-cd /home/psykopato/Documentos/gestion-torneos-videojuegos
-```
-
-### 2. Levantar los Servicios con Docker Compose
-
-```bash
-# Construir y levantar todos los servicios (Base de datos, Backend, Frontend)
+# Construir y levantar todos los servicios
 docker-compose up --build
 ```
 
-### 3. Acceder a la Aplicación
+**Acceso:**
+- **Frontend (App Web):** [http://localhost](http://localhost) (vía Nginx)
+- **Backend (API):** [http://localhost:5000](http://localhost:5000)
+- **Base de Datos (MySQL):** `localhost:3306`
+- **Gestión de DB (phpMyAdmin):** [http://localhost:8080](http://localhost:8080)
 
-Una vez que los contenedores estén en ejecución:
+---
 
-- **Frontend (Aplicación Web)**: http://localhost:5173
-- **Backend (API)**: http://localhost:5000
-- **Base de Datos MySQL**: localhost:3306
+### 🔑 Configuración inicial obligatoria
 
-## Comandos Útiles
+#### 1. Variables de entorno
 
-### Levantar solo el Frontend
-```bash
-docker-compose up frontend
-```
-
-### Levantar solo el Backend
-```bash
-docker-compose up backend
-```
-
-### Ver logs de un servicio específico
-```bash
-docker-compose logs -f frontend
-docker-compose logs -f backend
-```
-
-### Detener todos los servicios
-```bash
-docker-compose down
-```
-
-### Reconstruir un servicio específico
-```bash
-docker-compose build frontend
-docker-compose build backend
-```
-
-## Desarrollo Local (Sin Docker)
-
-### Frontend
+El `.env` del proyecto **debe** tener estas variables — si faltan, el backend no arranca:
 
 ```bash
-cd frontend
-npm install
-npm run dev
+# Genera con: python -c 'import secrets; print(secrets.token_urlsafe(64))'
+SECRET_KEY=<string-largo-aleatorio>
+
+# Credenciales del admin que va a crearse con seed.py
+ADMIN_NICKNAME=admin
+ADMIN_PASSWORD=<password-de-al-menos-8-chars>
 ```
 
-Acceso: http://localhost:5173
+`SECRET_KEY` firma los JWT. Si la cambiás, todos los tokens emitidos quedan inválidos (los usuarios tendrán que volver a loguearse).
 
-### Backend
+#### 2. Crear el usuario admin (idempotente)
 
+El esquema NO inserta el admin (Werkzeug usa hashes con sal — no se puede hardcodear en SQL). Una vez levantado el backend, ejecutá:
+
+```bash
+docker exec backend python seed.py
+```
+
+Comportamiento:
+- Si no existe → lo crea con `role='admin'`.
+- Si existe y ya es admin → no hace nada.
+- Si existe pero NO es admin → avisa y sale con error.
+- Para forzar reset de password o promoción: `docker exec -e ADMIN_FORCE_RESET=1 backend python seed.py`
+
+---
+
+### ⚡ Método 2: Modo Desarrollador (Recomendado para Programar)
+Usa este método cuando estés modificando código. Permite **Hot Reload** (los cambios se ven al instante sin reiniciar todo).
+
+> [!IMPORTANT]
+> **Nota:** Si usas este método, asegúrate de tener el servicio de la base de datos corriendo (ya sea con `docker compose up db` o instalado localmente).
+
+#### 1. Levantar el Backend
+Abre una terminal y ejecuta:
 ```bash
 cd backend
-pip install -r requirements.txt
+source venv/bin/activate  # En Linux/Mac
+# En Windows usa: venv\Scripts\activate
 python app.py
 ```
+**Acceso:** [http://localhost:5000](http://localhost:5000)
 
-Acceso: http://localhost:5000
+#### 2. Levantar el Frontend
+Abre **otra** terminal y ejecuta:
+```bash
+cd frontend
+npm install  # Solo la primera vez
+npm run dev
+```
+**Acceso:** [http://localhost:5173](http://localhost:5173)
 
-## Verificar que Todo Funciona
+---
 
-1. **Frontend**: Abre http://localhost:5173 - Deberías ver la página de inicio con el diseño Valorant
-2. **Backend**: Abre http://localhost:5000 - Deberías ver un mensaje JSON de confirmación
-3. **Base de Datos**: El backend debería conectarse automáticamente
+## 🔍 Comandos Útiles (Docker)
 
-## Estructura de Navegación
+| Acción | Comando |
+| :--- | :--- |
+| **Levantar todo** | `docker-compose up --build` |
+| **Detener todo** | `docker-compose down` |
+| **Levantar solo DB** | `docker-compose up db` |
+| **Ver logs (Frontend)** | `docker-compose logs -f frontend` |
+| **Ver logs (Backend)** | `docker-compose logs -f backend` |
+| **Reconstruir un servicio** | `docker-compose build <servicio>` |
+
+---
+
+## 🗺️ Estructura de la Aplicación
 
 - **/** - Página de inicio con torneos destacados
 - **/tournaments** - Lista de todos los torneos
-- **/tournaments/1** - Detalle de un torneo específico
 - **/teams** - Directorio de equipos
-- **/players** - Tabla de clasificación de jugadores
 - **/news** - Noticias de VALORANT (VLR.gg API)
-- **/admin** - Panel de administración
+- **/login** & **/register** - Acceso y creación de cuenta
 
-## Datos de Demostración
+## 🛡️ Características de Seguridad Implementadas
+- **JWT Authentication**: Tokens para sesiones seguras.
+- **Role-Based Access Control (RBAC)**: Permisos diferenciados para Admin, Tournament Manager y Usuarios.
+- **Contextual Team Roles**: Roles dinámicos dentro de los equipos (Coach, Player, etc.).
 
-La aplicación incluye datos de ejemplo para:
-- 4 Torneos (En vivo, Próximos, Finalizados)
-- 5 Equipos con rosters completos
-- 4 Partidos con resultados
-- 5 Jugadores con estadísticas
-- 3 Noticias de ejemplo
+## 🛠️ Solución de Problemas
 
-## Características Destacadas
+- **Error de conexión a la DB**: Verifica que el servicio de MySQL esté activo. Si usas Docker, revisa los logs con `docker-compose logs db`.
+- **Puerto ocupado**: Si el frontend no carga, verifica que el puerto `5173` no esté siendo usado por otro proceso.
+- **Error de permisos en Docker**: Ejecuta Docker Desktop como administrador.
 
-✨ **Diseño Valorant** - Colores, formas y animaciones inspiradas en el juego
-🎮 **Responsive** - Funciona en móvil, tablet y desktop
-🔌 **VLR.gg API** - Noticias reales del mundo competitivo
-📊 **Estadísticas** - Rankings, K/D, ADR, y más
-🏆 **Brackets** - Visualización de torneos
-
-## Solución de Problemas
-
-### El frontend no carga
-- Verifica que el puerto 5173 no esté en uso
-- Revisa los logs: `docker-compose logs frontend`
-
-### El backend no conecta a la base de datos
-- Asegúrate de que el servicio `db` esté corriendo
-- Verifica las variables de entorno en `.env`
-
-### Error de permisos en Docker
-- Ejecuta Docker Desktop como administrador
-- Verifica que Docker tenga permisos en el directorio del proyecto
-
-## Próximos Pasos
+## 🚀 Próximos Pasos
 
 1. Explora todas las páginas de la aplicación
 2. Revisa el código en `/frontend/src`
@@ -134,11 +129,11 @@ La aplicación incluye datos de ejemplo para:
 4. Añade más datos de ejemplo en `mockData.js`
 5. Conecta con el backend real cuando esté listo
 
-## Documentación Adicional
+## 📄 Documentación Adicional
 
 - [Frontend README](frontend/README.md) - Documentación detallada del frontend
 - [Walkthrough](/.gemini/antigravity/brain/5fd3780a-b8c3-4885-8649-cc80d92b7f71/walkthrough.md) - Guía completa de características
 
-## Soporte
+## 🆘 Soporte
 
 Para más información sobre el proyecto, consulta el [README principal](README.md).

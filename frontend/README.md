@@ -42,7 +42,7 @@ frontend/
 │   │   └── Admin.jsx
 │   ├── services/       # Servicios de API
 │   │   ├── vlrApi.js
-│   │   └── backendApi.js
+│   │   └── routesAPI.js
 │   ├── data/           # Datos de demostración
 │   │   └── mockData.js
 │   ├── App.jsx         # Componente principal
@@ -114,7 +114,7 @@ npm run build
 ### Jugadores (`/players`)
 - Tabla de clasificación
 - Estadísticas (K/D, ADR, HS%, Clutches)
-- Filtros por rol
+- Filtros por role
 
 ### Noticias (`/news`)
 - Noticias de VLR.gg API
@@ -143,10 +143,10 @@ const rankings = await vlrApi.getRankings('emea');
 
 ### Backend API
 ```javascript
-import backendApi from './services/backendApi';
+import routesAPI from './services/routesAPI';
 
 // Probar conexión
-const status = await backendApi.testConnection();
+const status = await routesAPI.testConnection();
 ```
 
 ## 🎯 Componentes Principales

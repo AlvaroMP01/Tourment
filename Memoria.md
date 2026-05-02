@@ -25,7 +25,7 @@ A continuación, se detalla la lista de funciones y lógicas de negocio principa
 - **Vista Detallada de Equipos (`TeamDetail.jsx`)**: 
   - Al hacer clic en un equipo público (`TeamCard`), se entra a un HUB detallado del equipo.
   - Se diseñó un Hero Banner inmersivo con las estadísticas globales del conjunto competitivo (K/D, Rango, WinRate, Victorias).
-  - Se despliega iterativamente el *Roster* de jugadores listando las cartas informativas de sus integrantes (Rol in-game, Agente Favorito y sus estadísticas o ratios de juego).
+  - Se despliega iterativamente el *Roster* de jugadores listando las cartas informativas de sus integrantes (role in-game, Agente Favorito y sus estadísticas o ratios de juego).
 
 ## 5. El Sistema de Agencia Libre y Reclutamiento
 - **Solicitud de Entrada**: Cualquier usuario que NO pertenezca a ningún equipo ni sea el líder de uno puede acceder a los perfiles de los equipos mediante la vista en profundidad. Si el equipo atacado **no ha cubierto aún sus 7 cupos**, el visitante visualizará el botón verde **"Solicitar Entrada"**.
@@ -71,9 +71,9 @@ A continuación, se detalla la lista de funciones y lógicas de negocio principa
 - **Integración en `Admin.jsx`**: Se añadió una nueva pestaña "Usuarios" con icono dedicado en la navegación del panel de administración.
 
 ### 9. Edición de Equipos desde "Mis Equipos" (`MyTeams.jsx`)
-- **Botón "Editar"**: En las tarjetas de equipos donde el usuario es el líder (o tiene rol de Coach), aparece un botón "Editar" en la esquina superior derecha.
+- **Botón "Editar"**: En las tarjetas de equipos donde el usuario es el líder (o tiene role de Coach), aparece un botón "Editar" en la esquina superior derecha.
 - **Modal Adaptativo de Edición**: Se reutilizó el modal de creación de equipos para la edición. Cuando se abre en modo edición (`isEditMode`), los campos se precargan con los datos actuales del equipo (Nombre, Tag, Región, Logo).
-- **Campos Ocultos en Edición**: Los selectores de rol del fundador ("Solo Jugador" / "Mánager" / "Ambos") se ocultan durante la edición para evitar conflictos con los roles ya establecidos.
+- **Campos Ocultos en Edición**: Los selectores de role del fundador ("Solo Jugador" / "Mánager" / "Ambos") se ocultan durante la edición para evitar conflictos con los roles ya establecidos.
 
 ### 10. Gestión de Plantilla de Equipos
 - **Sección "Gestión de Plantilla"**: Al editar un equipo, se muestra en el modal una lista completa de todos los jugadores que forman parte de la alineación.
@@ -82,14 +82,14 @@ A continuación, se detalla la lista de funciones y lógicas de negocio principa
   - **Solo Coach**: Miembro con permisos de edición y gestión del equipo, sin participar como jugador activo.
   - **Jugador y Coach**: Miembro que cumple ambas funciones simultáneamente.
 - **Expulsión de Jugadores**: Se añadió un botón "X" junto a cada miembro (protegiendo al fundador) que permite expulsar jugadores con confirmación de seguridad.
-- **Permisos Extendidos**: Los usuarios con rol "Coach" o "Jugador y Coach" dentro del equipo obtienen automáticamente acceso al botón de edición del equipo (`canEditTeam`).
+- **Permisos Extendidos**: Los usuarios con role "Coach" o "Jugador y Coach" dentro del equipo obtienen automáticamente acceso al botón de edición del equipo (`canEditTeam`).
 
 ### 11. Diferenciación Visual de Roles en las Tarjetas de Equipos
-- **`TeamCard.jsx` (Vista General)**: En el listado de equipos, cada integrante del roster se muestra con una etiqueta de color según su rol interno:
+- **`TeamCard.jsx` (Vista General)**: En el listado de equipos, cada integrante del roster se muestra con una etiqueta de color según su role interno:
   - Dorado (`text-valorant-gold`) para Coaches.
   - Azul (`text-blue-400`) para Jugador/Coach.
   - Blanco (`text-white`) para Jugadores estándar.
-- **`TeamDetail.jsx` (Vista Ampliada)**: En la vista detallada del equipo, cada tarjeta de jugador incluye una etiqueta superior con el rol (`[COACH]`, `[JUG/COACH]`, `[JUGADOR]`) con colores diferenciados y bordes a juego.
+- **`TeamDetail.jsx` (Vista Ampliada)**: En la vista detallada del equipo, cada tarjeta de jugador incluye una etiqueta superior con el role (`[COACH]`, `[JUG/COACH]`, `[JUGADOR]`) con colores diferenciados y bordes a juego.
 - **Inclusión del Mánager/Coach**: Si el líder/fundador del equipo no estaba registrado como jugador en el roster, ahora se añade automáticamente al principio de la lista de integrantes para que sea visible en ambas vistas.
 
 ### 12. Página de Perfil de Usuario (`Profile.jsx`)
@@ -97,7 +97,7 @@ A continuación, se detalla la lista de funciones y lógicas de negocio principa
   - **Hero / Cabecera**: Avatar (emoji editable), nombre de jugador personalizable y descripción/bio editable.
   - **Insignias / Logros**: Sistema de badges automáticos que se desbloquean según la actividad del usuario (Tiene Equipo, Líder, Competidor, 100+ Kills, Clutch Master).
   - **Estadísticas como Jugador**: Bloque visual con Kills, Deaths, Assists, K/D, ADR, HS% y Clutches. Si el usuario no tiene datos en `mockPlayers`, se inicializan en 0 y son editables.
-  - **Mis Equipos**: Lista de equipos del usuario con su rol interno, enlazados a la vista detallada de cada equipo.
+  - **Mis Equipos**: Lista de equipos del usuario con su role interno, enlazados a la vista detallada de cada equipo.
   - **Torneos**: Torneos en los que ha participado a través de sus equipos, cruzando datos con `mockMatches` y `mockTournaments`.
   - **Historial de Partidas**: Partidas jugadas con resultados, mapa, ronda y estado (victoria/derrota/en vivo).
   - **Cerrar Sesión**: Botón rojo al final de la página con confirmación antes de desconectar.

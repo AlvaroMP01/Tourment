@@ -1,6 +1,9 @@
-flask
-flask-sqlalchemy
+Flask
+Flask-Cors
+Flask-SQLAlchemy
+mysql-connector-python
 pymysql
-python-dotenv
-flask-cors
-cryptography
+feedparser
+requests
+pyjwt
+werkzeug

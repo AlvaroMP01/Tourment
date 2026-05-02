@@ -1,26 +1,61 @@
 import os
 from flask import Flask, jsonify
-from flask_sqlalchemy import SQLAlchemy
-from sqlalchemy import text # Text para poder usar SQL en el test
+from flask_cors import CORS
+from sqlalchemy import text
+from extensions import db
+from models import User, Team, Tournament, Match, TeamMember, UserStat, JoinRequest, UserAchievement
+from news_scraper import NewsScraper
+from routes.auth import auth_bp
+from routes.teams import teams_bp
+from routes.tournaments import tournaments_bp
+from routes.users import users_bp
+from routes.admin import admin_bp
 
 app = Flask(__name__)
+CORS(app)
+
+# Clave para firmar/verificar JWT. DEBE venir de variable de entorno.
+# Sin SECRET_KEY válida, la app NO arranca: un fallback hardcodeado permitiría
+# a cualquiera firmar tokens válidos.
+SECRET_KEY = os.getenv('SECRET_KEY')
+if not SECRET_KEY or len(SECRET_KEY) < 32:
+    raise RuntimeError(
+        "SECRET_KEY no definida o demasiado corta (mínimo 32 chars). "
+        "Generá una con: python -c 'import secrets; print(secrets.token_urlsafe(64))'"
+    )
+app.config['SECRET_KEY'] = SECRET_KEY
 
 # CONFIGURACIÓN DE LA BASE DE DATOS
 user = os.getenv('MYSQL_USER', 'torneos_user')
 password = os.getenv('MYSQL_PASSWORD', 'torneos_pass')
-host = 'db' 
+host = os.getenv('MYSQL_HOST', 'db') 
 database = os.getenv('MYSQL_DATABASE', 'torneos_db')
-port = '3306'
+port = os.getenv('MYSQL_PORT', '3306')
 
 # Conexión para SQLAlchemy
 app.config['SQLALCHEMY_DATABASE_URI'] = f'mysql+pymysql://{user}:{password}@{host}:{port}/{database}'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
-db = SQLAlchemy(app)
+# Inicializar la extensión con la app
+db.init_app(app)
+
+# Registrar Blueprints
+app.register_blueprint(auth_bp, url_prefix='/api/auth')
+app.register_blueprint(teams_bp, url_prefix='/api/teams')
+app.register_blueprint(tournaments_bp, url_prefix='/api/tournaments')
+app.register_blueprint(users_bp, url_prefix='/api/users')
+app.register_blueprint(admin_bp, url_prefix='/api/admin')
+
+scraper = NewsScraper()
 
 @app.route('/')
 def home():
-    return jsonify({"mensaje": "El servidor Backend está funcionando corrextamente."})
+    return jsonify({"mensaje": "El servidor Backend está funcionando correctamente."})
+
+@app.route('/api/news')
+def get_news():
+    news = scraper.get_latest_news(limit=6)
+    return jsonify(news)
 
 @app.route('/test-db')
 def test_db():
@@ -32,5 +67,4 @@ def test_db():
         return jsonify({"estado": "Error", "mensaje": f"No se pudo conectar a la BD: {str(e)}"}), 500
 
 if __name__ == '__main__':
-    # debug=True permite cambiar código y que el servidor se reinicie solo
     app.run(host='0.0.0.0', port=5000, debug=True)

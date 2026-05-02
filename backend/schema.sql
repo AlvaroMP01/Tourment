@@ -9,22 +9,25 @@ CREATE TABLE IF NOT EXISTS users (
     id INT AUTO_INCREMENT PRIMARY KEY,
     nickname VARCHAR(50) NOT NULL UNIQUE,
     password_hash VARCHAR(255) NOT NULL,
-    system_role ENUM('user', 'coach', 'admin') DEFAULT 'user', -- Roles del sistema
+    role ENUM('admin', 'tournament_manager', 'player', 'coach', 'player_coach') DEFAULT 'player', -- role único del usuario
     avatar VARCHAR(255), -- Emoji o URL
     custom_name VARCHAR(100),
     bio TEXT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- 2. Estadísticas de Usuarios (Profile)
+-- 2. Estadísticas de Usuarios (agregado denormalizado, NO se edita a mano)
+-- Counters sumables + promedios ponderados por matches_played.
+-- Source of truth: tabla match_player_stats.
 CREATE TABLE IF NOT EXISTS user_stats (
     user_id INT PRIMARY KEY,
     kills INT DEFAULT 0,
     deaths INT DEFAULT 0,
     assists INT DEFAULT 0,
+    clutches INT DEFAULT 0,
     adr DECIMAL(5,2) DEFAULT 0.00,
     hs_percentage DECIMAL(5,2) DEFAULT 0.00,
-    clutches INT DEFAULT 0,
+    matches_played INT DEFAULT 0,
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
 
@@ -47,6 +50,7 @@ CREATE TABLE IF NOT EXISTS team_members (
     ingame_role VARCHAR(50), -- Ej. Duelist, Sentinel
     favorite_agent VARCHAR(50), -- Ej. Omen, Jett
     joined_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    occupies_slot BOOLEAN DEFAULT TRUE,
     FOREIGN KEY (team_id) REFERENCES teams(id) ON DELETE CASCADE,
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
     UNIQUE(team_id, user_id) -- Un usuario no puede estar dos veces en el mismo equipo
@@ -90,6 +94,22 @@ CREATE TABLE IF NOT EXISTS matches (
     FOREIGN KEY (tournament_id) REFERENCES tournaments(id) ON DELETE SET NULL,
     FOREIGN KEY (team1_id) REFERENCES teams(id) ON DELETE CASCADE,
     FOREIGN KEY (team2_id) REFERENCES teams(id) ON DELETE CASCADE
+);
+
+-- 7b. Stats por jugador-en-partida (source of truth de las estadísticas)
+CREATE TABLE IF NOT EXISTS match_player_stats (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    match_id INT NOT NULL,
+    user_id INT NOT NULL,
+    kills INT DEFAULT 0,
+    deaths INT DEFAULT 0,
+    assists INT DEFAULT 0,
+    adr DECIMAL(5,2) DEFAULT 0.00,
+    hs_percentage DECIMAL(5,2) DEFAULT 0.00,
+    clutches INT DEFAULT 0,
+    FOREIGN KEY (match_id) REFERENCES matches(id) ON DELETE CASCADE,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    UNIQUE(match_id, user_id)
 );
 
 -- 8. Insignias / Logros de Usuario (Profile Badges)
