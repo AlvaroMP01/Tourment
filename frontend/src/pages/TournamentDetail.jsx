@@ -15,6 +15,8 @@ const formatDate = (raw) => {
   return Number.isNaN(d.getTime()) ? '—' : d.toLocaleDateString('es-ES');
 };
 
+const isHttpUrl = (s) => typeof s === 'string' && /^https?:\/\//i.test(s);
+
 const parseScore = (raw) => {
   // Backend devuelve "13:11" como string. Devolvemos números o null.
   if (!raw || typeof raw !== 'string') return [null, null];
@@ -124,8 +126,15 @@ const TournamentDetail = () => {
 
   return (
     <div className="min-h-screen bg-valorant-dark">
-      {/* Header sintético: gradiente + nombre. El modelo no guarda imagen ni descripción. */}
+      {/* Header: imagen URL real, emoji grande, o fallback de gradiente. */}
       <div className="relative h-72 overflow-hidden bg-gradient-to-br from-valorant-dark via-valorant-dark-secondary to-valorant-red/40">
+        {isHttpUrl(tournament.image) ? (
+          <img src={tournament.image} alt={tournament.name} className="absolute inset-0 w-full h-full object-cover" />
+        ) : tournament.image ? (
+          <div className="absolute inset-0 flex items-center justify-center">
+            <span className="text-9xl opacity-60">{tournament.image}</span>
+          </div>
+        ) : null}
         <div className="absolute inset-0 bg-gradient-to-t from-valorant-dark via-valorant-dark/80 to-transparent"></div>
         <div className="absolute bottom-0 left-0 right-0 p-8">
           <div className="max-w-7xl mx-auto">
@@ -133,6 +142,9 @@ const TournamentDetail = () => {
               {badge && <span className={badge.className}>{badge.label}</span>}
             </div>
             <h1 className="text-6xl font-tungsten text-white tracking-wider mb-4">{tournament.name}</h1>
+            {tournament.description && (
+              <p className="text-xl text-valorant-light max-w-3xl">{tournament.description}</p>
+            )}
           </div>
         </div>
       </div>
@@ -160,11 +172,11 @@ const TournamentDetail = () => {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         {activeTab === 'overview' && (
           <div className="space-y-8">
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
               <div className="card-valorant p-6 text-center">
-                <div className="text-xs text-valorant-light uppercase mb-2">Estado</div>
-                <div className="text-2xl font-tungsten text-valorant-red uppercase">
-                  {tournament.status}
+                <div className="text-xs text-valorant-light uppercase mb-2">Premio</div>
+                <div className="text-2xl font-tungsten text-valorant-red">
+                  {tournament.prize || 'Por determinar'}
                 </div>
               </div>
               <div className="card-valorant p-6 text-center">

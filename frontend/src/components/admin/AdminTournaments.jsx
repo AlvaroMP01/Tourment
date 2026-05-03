@@ -7,6 +7,9 @@ const emptyTournament = {
   start_date: '',
   end_date: '',
   status: 'upcoming',
+  image: '',
+  prize: '',
+  description: '',
 };
 
 const STATUS_OPTIONS = [
@@ -45,7 +48,17 @@ const AdminTournaments = () => {
   };
 
   const handleOpenModal = (item = null) => {
-    setEditing(item ? { ...item } : { ...emptyTournament });
+    if (item) {
+      // Backend devuelve null para campos opcionales vacíos; los inputs necesitan strings.
+      setEditing({
+        ...item,
+        image: item.image || '',
+        prize: item.prize || '',
+        description: item.description || '',
+      });
+    } else {
+      setEditing({ ...emptyTournament });
+    }
     setError('');
     setIsModalOpen(true);
   };
@@ -70,6 +83,9 @@ const AdminTournaments = () => {
       start_date: editing.start_date,
       end_date: editing.end_date,
       status: editing.status,
+      image: editing.image,
+      prize: editing.prize,
+      description: editing.description,
     };
 
     try {
@@ -177,6 +193,38 @@ const AdminTournaments = () => {
               <input
                 type="text" name="name" required value={editing.name} onChange={handleChange}
                 className="w-full bg-valorant-dark-secondary border border-valorant-dark focus:border-valorant-red outline-none p-2 text-white"
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-xs font-bold uppercase text-valorant-light mb-1">
+                  Imagen <span className="text-valorant-light/60 normal-case">(URL o emoji)</span>
+                </label>
+                <input
+                  type="text" name="image" value={editing.image} onChange={handleChange}
+                  placeholder="🏆  o  https://..."
+                  className="w-full bg-valorant-dark-secondary border border-valorant-dark focus:border-valorant-red outline-none p-2 text-white"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-bold uppercase text-valorant-light mb-1">
+                  Premio <span className="text-valorant-light/60 normal-case">(texto libre)</span>
+                </label>
+                <input
+                  type="text" name="prize" maxLength={100} value={editing.prize} onChange={handleChange}
+                  placeholder="€10.000, Premio simbólico..."
+                  className="w-full bg-valorant-dark-secondary border border-valorant-dark focus:border-valorant-red outline-none p-2 text-white"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold uppercase text-valorant-light mb-1">Descripción</label>
+              <textarea
+                name="description" rows={3} value={editing.description} onChange={handleChange}
+                placeholder="Una breve descripción del torneo..."
+                className="w-full bg-valorant-dark-secondary border border-valorant-dark focus:border-valorant-red outline-none p-2 text-white resize-y"
               />
             </div>
 

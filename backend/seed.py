@@ -246,6 +246,9 @@ def seed_tournament(name='Torneo de Pruebas 2026'):
         start_date=today,
         end_date=today + timedelta(days=14),
         status='upcoming',
+        image='🏆',
+        prize='€10.000',
+        description='Torneo amistoso para validar el flujo completo de la plataforma. Red Phoenix vs Blue Wolves a 3 mapas.',
     )
     db.session.add(t)
     db.session.commit()

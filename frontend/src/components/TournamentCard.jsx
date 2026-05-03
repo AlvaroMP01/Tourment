@@ -13,6 +13,8 @@ const formatDate = (raw) => {
   return d.toLocaleDateString('es-ES');
 };
 
+const isHttpUrl = (s) => typeof s === 'string' && /^https?:\/\//i.test(s);
+
 const TournamentCard = ({ tournament }) => {
   // El adapter expone startDate/endDate; el endpoint crudo usa start_date/end_date.
   // Aceptamos ambas para que el componente sirva en cualquier caller.
@@ -20,17 +22,26 @@ const TournamentCard = ({ tournament }) => {
   const endDate = tournament.endDate || tournament.end_date;
   const status = tournament.status;
   const badge = STATUS_BADGE[status] || null;
+  const { image, prize, description } = tournament;
 
   return (
     <Link to={`/tournaments/${tournament.id}`} className="block group">
       <div className="card-valorant overflow-hidden h-full transition-transform duration-300 group-hover:scale-105">
-        {/* Cover sintético: gradiente con el nombre. El modelo no guarda imagen. */}
+        {/* Cover: imagen URL real, emoji centrado, o fallback de gradiente con el nombre. */}
         <div className="relative h-48 overflow-hidden bg-gradient-to-br from-valorant-dark via-valorant-dark-secondary to-valorant-red/40">
-          <div className="absolute inset-0 flex items-center justify-center">
-            <span className="text-5xl font-tungsten text-white/20 tracking-widest uppercase text-center px-4">
-              {tournament.name}
-            </span>
-          </div>
+          {isHttpUrl(image) ? (
+            <img src={image} alt={tournament.name} className="w-full h-full object-cover" />
+          ) : image ? (
+            <div className="absolute inset-0 flex items-center justify-center">
+              <span className="text-7xl">{image}</span>
+            </div>
+          ) : (
+            <div className="absolute inset-0 flex items-center justify-center">
+              <span className="text-5xl font-tungsten text-white/20 tracking-widest uppercase text-center px-4">
+                {tournament.name}
+              </span>
+            </div>
+          )}
           <div className="absolute inset-0 bg-gradient-to-t from-valorant-dark via-transparent to-transparent"></div>
 
           {badge && (
@@ -46,18 +57,40 @@ const TournamentCard = ({ tournament }) => {
             {tournament.name}
           </h3>
 
+          {description && (
+            <p className="text-valorant-light text-sm mb-4 line-clamp-2">{description}</p>
+          )}
+
           <div className="divider-glow mb-4"></div>
 
           <div className="grid grid-cols-2 gap-4 text-sm">
+            {prize ? (
+              <div>
+                <div className="text-valorant-light opacity-70 uppercase text-xs mb-1">Premio</div>
+                <div className="text-valorant-red font-bold text-lg">{prize}</div>
+              </div>
+            ) : (
+              <div>
+                <div className="text-valorant-light opacity-70 uppercase text-xs mb-1">Inicio</div>
+                <div className="text-white font-bold">{formatDate(startDate)}</div>
+              </div>
+            )}
             <div>
-              <div className="text-valorant-light opacity-70 uppercase text-xs mb-1">Inicio</div>
-              <div className="text-white font-bold">{formatDate(startDate)}</div>
-            </div>
-            <div>
-              <div className="text-valorant-light opacity-70 uppercase text-xs mb-1">Fin</div>
-              <div className="text-white font-bold">{formatDate(endDate)}</div>
+              <div className="text-valorant-light opacity-70 uppercase text-xs mb-1">
+                {prize ? 'Inicio' : 'Fin'}
+              </div>
+              <div className="text-white font-bold">
+                {formatDate(prize ? startDate : endDate)}
+              </div>
             </div>
           </div>
+
+          {prize && (
+            <div className="mt-3 pt-3 border-t border-valorant-dark-tertiary text-xs text-valorant-light flex justify-between">
+              <span>Fin:</span>
+              <span className="text-white font-bold">{formatDate(endDate)}</span>
+            </div>
+          )}
         </div>
       </div>
     </Link>

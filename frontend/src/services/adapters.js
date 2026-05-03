@@ -30,7 +30,9 @@ export const tournamentAdapter = (apiTournament) => {
     startDate: apiTournament.start_date,
     endDate: apiTournament.end_date,
     status: apiTournament.status,
-    prize: apiTournament.prize || 'Por determinar'
+    image: apiTournament.image || null,
+    prize: apiTournament.prize || 'Por determinar',
+    description: apiTournament.description || null,
   };
 };
 

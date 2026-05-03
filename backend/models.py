@@ -98,6 +98,9 @@ class Tournament(db.Model):
     start_date = db.Column(db.Date, nullable=False)
     end_date = db.Column(db.Date, nullable=False)
     status = db.Column(db.Enum('upcoming', 'live', 'finished'), default='upcoming')
+    image = db.Column(db.String(255))     # URL o emoji
+    prize = db.Column(db.String(100))     # string libre
+    description = db.Column(db.Text)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
     # Relationships

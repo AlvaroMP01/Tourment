@@ -76,6 +76,9 @@ CREATE TABLE IF NOT EXISTS tournaments (
     start_date DATE NOT NULL,
     end_date DATE NOT NULL,
     status ENUM('upcoming', 'live', 'finished') DEFAULT 'upcoming',
+    image VARCHAR(255), -- URL o emoji (mismo patrón que teams.logo)
+    prize VARCHAR(100), -- string libre: "€10.000", "Premio simbólico", etc.
+    description TEXT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 

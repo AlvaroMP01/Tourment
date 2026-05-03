@@ -17,7 +17,10 @@ def get_tournaments():
         "name": t.name,
         "start_date": t.start_date.isoformat(),
         "end_date": t.end_date.isoformat(),
-        "status": t.status
+        "status": t.status,
+        "image": t.image,
+        "prize": t.prize,
+        "description": t.description,
     } for t in tournaments]), 200
 
 @tournaments_bp.route('/<int:tournament_id>', methods=['GET'])
@@ -29,6 +32,9 @@ def get_tournament_detail(tournament_id):
         "start_date": tournament.start_date.isoformat(),
         "end_date": tournament.end_date.isoformat(),
         "status": tournament.status,
+        "image": tournament.image,
+        "prize": tournament.prize,
+        "description": tournament.description,
         "matches": [
             {
                 "id": m.id,
@@ -55,7 +61,10 @@ def create_tournament(current_user):
             name=data['name'],
             start_date=data['start_date'],
             end_date=data['end_date'],
-            status=data.get('status', 'upcoming')
+            status=data.get('status', 'upcoming'),
+            image=data.get('image') or None,
+            prize=data.get('prize') or None,
+            description=data.get('description') or None,
         )
         db.session.add(new_tournament)
         db.session.commit()
@@ -72,7 +81,7 @@ def update_tournament(current_user, tournament_id):
     tournament = Tournament.query.get_or_404(tournament_id)
     data = request.get_json() or {}
 
-    editable = ('name', 'start_date', 'end_date', 'status')
+    editable = ('name', 'start_date', 'end_date', 'status', 'image', 'prize', 'description')
     touched = False
     for f in editable:
         if f in data:
@@ -80,7 +89,11 @@ def update_tournament(current_user, tournament_id):
                 return jsonify({"error": "status inválido"}), 400
             if f == 'name' and (not isinstance(data[f], str) or not data[f].strip()):
                 return jsonify({"error": "name no puede ser vacío"}), 400
-            setattr(tournament, f, data[f])
+            # Para campos opcionales, string vacío == NULL (limpiar el campo)
+            value = data[f]
+            if f in ('image', 'prize', 'description') and isinstance(value, str) and not value.strip():
+                value = None
+            setattr(tournament, f, value)
             touched = True
 
     if not touched:

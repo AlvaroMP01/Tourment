@@ -15,7 +15,8 @@ const Navbar = () => {
     { name: 'Noticias', path: '/news' }
   ];
 
-  if (user) {
+  // Admin no tiene equipo propio — la sección no aplica para ese rol.
+  if (user && user.role !== 'admin') {
     navItems.push({ name: 'Mis Equipos', path: '/my-teams' });
   }
 
@@ -74,7 +75,7 @@ const Navbar = () => {
                 to="/profile"
                 className={`ml-4 px-4 py-2 font-bold uppercase text-sm tracking-wider transition-all duration-300 clip-corner-sm flex items-center gap-2 ${isActive('/profile') ? 'bg-valorant-red text-white' : 'border border-valorant-red text-valorant-red hover:bg-valorant-red hover:text-white'}`}
               >
-                <span className="text-base">Test</span>
+                <span className="text-base">{user.nickname}</span>
               </Link>
             ) : (
               <Link
