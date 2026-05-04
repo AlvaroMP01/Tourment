@@ -3,6 +3,7 @@ from flask import Blueprint, request, jsonify, current_app
 from extensions import db
 from models import User
 from utils import admin_required
+from uploads_helper import delete_upload, is_uploaded_path
 
 admin_bp = Blueprint('admin', __name__)
 
@@ -76,11 +77,18 @@ def delete_user(current_user, user_id):
     if target.role == 'admin' and _admin_count() <= 1:
         return jsonify({"error": "No se puede borrar al último admin del sistema"}), 409
 
+    # Capturo el avatar antes del delete: el commit borra la fila en DB pero
+    # el archivo físico hay que limpiarlo a mano para no dejar huérfanos.
+    old_avatar = target.avatar
+
     try:
         db.session.delete(target)
         db.session.commit()
-        return jsonify({"mensaje": "Usuario borrado"}), 200
     except Exception:
         db.session.rollback()
         current_app.logger.exception("Error delete_user user=%s", user_id)
         return jsonify({"error": "No se pudo borrar el usuario"}), 500
+
+    if old_avatar and is_uploaded_path(old_avatar):
+        delete_upload(old_avatar)
+    return jsonify({"mensaje": "Usuario borrado"}), 200

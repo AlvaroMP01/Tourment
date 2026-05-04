@@ -3,9 +3,11 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { routesAPI } from '../services/routesAPI';
 import { userAdapter } from '../services/adapters';
+import Avatar from '../components/Avatar';
+import ImageUploader from '../components/ImageUploader';
 
 const Profile = () => {
-  const { user, token, logout } = useAuth();
+  const { user, token, logout, refreshUser } = useAuth();
   const navigate = useNavigate();
 
   const handleLogout = () => {
@@ -15,8 +17,8 @@ const Profile = () => {
   const [formData, setFormData] = useState({
     custom_name: '',
     bio: '',
-    avatar: ''
   });
+  const [avatarPath, setAvatarPath] = useState(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
@@ -31,8 +33,8 @@ const Profile = () => {
           setFormData({
             custom_name: adaptedUser.customName,
             bio: adaptedUser.bio,
-            avatar: adaptedUser.avatar
           });
+          setAvatarPath(adaptedUser.avatar || null);
         } catch (err) {
           console.error("Error cargando datos de perfil:", err);
           setError("No se pudieron cargar tus datos.");
@@ -60,12 +62,23 @@ const Profile = () => {
     try {
       await routesAPI.updateMe(formData);
       setSuccess('¡Perfil actualizado con éxito!');
-      // En una app real, aquí refrescaríamos el contexto global
     } catch (err) {
       setError(err.message || 'Error al actualizar el perfil');
     } finally {
       setSaving(false);
     }
+  };
+
+  const handleUploadAvatar = async (file) => {
+    const data = await routesAPI.uploadAvatar(file);
+    setAvatarPath(data.avatar);
+    await refreshUser();
+  };
+
+  const handleDeleteAvatar = async () => {
+    await routesAPI.deleteAvatar();
+    setAvatarPath(null);
+    await refreshUser();
   };
 
   if (loading) return <div className="min-h-screen bg-valorant-dark flex items-center justify-center"><div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-valorant-red"></div></div>;
@@ -79,8 +92,8 @@ const Profile = () => {
           {/* Sidebar: Avatar y Nombre */}
           <div className="md:col-span-1">
             <div className="card-valorant p-6 text-center">
-              <div className="w-32 h-32 bg-valorant-dark-secondary border-2 border-valorant-red mx-auto mb-4 flex items-center justify-center text-5xl clip-corner">
-                {formData.avatar || '👤'}
+              <div className="flex justify-center mb-4">
+                <Avatar path={avatarPath} size="lg" />
               </div>
               <h3 className="text-2xl font-tungsten">{user?.nickname}</h3>
               <p className="text-valorant-light text-sm uppercase tracking-widest">{user?.role}</p>
@@ -110,9 +123,20 @@ const Profile = () => {
           <div className="md:col-span-2">
             <div className="card-valorant p-8">
               <h3 className="text-2xl font-tungsten mb-6">Editar Información</h3>
-              
+
               {error && <div className="bg-red-500/20 border border-valorant-red p-3 mb-4 text-sm text-center">{error}</div>}
               {success && <div className="bg-green-500/20 border border-green-500 p-3 mb-4 text-sm text-center">{success}</div>}
+
+              <div className="mb-8">
+                <label className="block text-sm font-bold uppercase text-valorant-light mb-3">Avatar</label>
+                <ImageUploader
+                  currentPath={avatarPath}
+                  onUpload={handleUploadAvatar}
+                  onDelete={handleDeleteAvatar}
+                  placeholder="avatar"
+                  label="Subir Avatar"
+                />
+              </div>
 
               <form onSubmit={handleSubmit} className="space-y-6">
                 <div>
@@ -135,16 +159,6 @@ const Profile = () => {
                     className="w-full bg-valorant-dark-secondary border border-valorant-dark-tertiary focus:border-valorant-red outline-none p-3 text-white transition-colors clip-corner-sm resize-none"
                   ></textarea>
                 </div>
-                <div>
-                  <label className="block text-sm font-bold uppercase text-valorant-light mb-2">URL de Avatar (Emoji o Link)</label>
-                  <input
-                    type="text"
-                    name="avatar"
-                    value={formData.avatar}
-                    onChange={handleChange}
-                    className="w-full bg-valorant-dark-secondary border border-valorant-dark-tertiary focus:border-valorant-red outline-none p-3 text-white transition-colors clip-corner-sm"
-                  />
-                </div>
                 <button
                   type="submit"
                   disabled={saving}
@@ -162,4 +176,3 @@ const Profile = () => {
 };
 
 export default Profile;
-

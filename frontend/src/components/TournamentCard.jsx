@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom';
 import { formatPrize } from '../services/adapters';
+import TournamentImage from './TournamentImage';
 
 const STATUS_BADGE = {
   live: { className: 'badge-live', label: '● EN VIVO' },
@@ -14,8 +15,6 @@ const formatDate = (raw) => {
   return d.toLocaleDateString('es-ES');
 };
 
-const isHttpUrl = (s) => typeof s === 'string' && /^https?:\/\//i.test(s);
-
 const TournamentCard = ({ tournament }) => {
   // El adapter expone startDate/endDate; el endpoint crudo usa start_date/end_date.
   // Aceptamos ambas para que el componente sirva en cualquier caller.
@@ -23,7 +22,7 @@ const TournamentCard = ({ tournament }) => {
   const endDate = tournament.endDate || tournament.end_date;
   const status = tournament.status;
   const badge = STATUS_BADGE[status] || null;
-  const { image, description } = tournament;
+  const { image, description, name } = tournament;
 
   // Prize: el adapter expone prizeAmount/prizeCurrency + prize formateado;
   // el endpoint crudo expone prize_amount + prize_currency. Aceptamos ambas.
@@ -35,21 +34,8 @@ const TournamentCard = ({ tournament }) => {
   return (
     <Link to={`/tournaments/${tournament.id}`} className="block group">
       <div className="card-valorant overflow-hidden h-full transition-transform duration-300 group-hover:scale-105">
-        {/* Cover: imagen URL real, emoji centrado, o fallback de gradiente con el nombre. */}
-        <div className="relative h-48 overflow-hidden bg-gradient-to-br from-valorant-dark via-valorant-dark-secondary to-valorant-red/40">
-          {isHttpUrl(image) ? (
-            <img src={image} alt={tournament.name} className="w-full h-full object-cover" />
-          ) : image ? (
-            <div className="absolute inset-0 flex items-center justify-center">
-              <span className="text-7xl">{image}</span>
-            </div>
-          ) : (
-            <div className="absolute inset-0 flex items-center justify-center">
-              <span className="text-5xl font-tungsten text-white/20 tracking-widest uppercase text-center px-4">
-                {tournament.name}
-              </span>
-            </div>
-          )}
+        <div className="relative h-48 overflow-hidden">
+          <TournamentImage path={image} name={name} className="absolute inset-0 w-full h-full object-cover" />
           <div className="absolute inset-0 bg-gradient-to-t from-valorant-dark via-transparent to-transparent"></div>
 
           {badge && (

@@ -7,3 +7,4 @@ feedparser
 requests
 pyjwt
 werkzeug
+Pillow

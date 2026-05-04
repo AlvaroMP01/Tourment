@@ -2,6 +2,8 @@ import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { routesAPI } from '../services/routesAPI';
 import Modal from '../components/Modal';
+import TeamLogo from '../components/TeamLogo';
+import ImageUploader from '../components/ImageUploader';
 
 const ROLE_LABELS = {
   manager: 'Manager',
@@ -13,7 +15,6 @@ const ROLE_LABELS = {
 const emptyTeamForm = {
   name: '',
   tag: '',
-  logo: '🎮',
   region: '',
 };
 
@@ -29,6 +30,7 @@ const MyTeams = () => {
   // Crear / editar team
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingTeamId, setEditingTeamId] = useState(null);
+  const [editingTeamLogo, setEditingTeamLogo] = useState(null);
   const [teamForm, setTeamForm] = useState(emptyTeamForm);
   const [submitting, setSubmitting] = useState(false);
 
@@ -73,16 +75,17 @@ const MyTeams = () => {
 
   const openCreateForm = () => {
     setEditingTeamId(null);
+    setEditingTeamLogo(null);
     setTeamForm(emptyTeamForm);
     setIsFormOpen(true);
   };
 
   const openEditForm = (team) => {
     setEditingTeamId(team.id);
+    setEditingTeamLogo(team.logo || null);
     setTeamForm({
       name: team.name,
       tag: team.tag,
-      logo: team.logo || '🎮',
       region: team.region || '',
     });
     setIsFormOpen(true);
@@ -209,11 +212,7 @@ const MyTeams = () => {
             {teams.map(team => (
               <div key={team.id} className="card-valorant p-6">
                 <div className="flex flex-col md:flex-row md:items-start gap-6">
-                  <div className="w-20 h-20 bg-valorant-dark-tertiary clip-corner flex items-center justify-center text-4xl shrink-0 overflow-hidden">
-                    {team.logo && team.logo.startsWith('http') ? (
-                      <img src={team.logo} alt="Logo" className="w-full h-full object-cover" />
-                    ) : (team.logo || '🎮')}
-                  </div>
+                  <TeamLogo path={team.logo} size="md" className="shrink-0" />
 
                   <div className="flex-1">
                     <div className="flex items-center gap-3 mb-1 flex-wrap">
@@ -347,21 +346,35 @@ const MyTeams = () => {
           title={editingTeamId ? 'Editar Equipo' : 'Fundar Nuevo Equipo'}
         >
           <form onSubmit={handleSaveTeam} className="space-y-4">
-            <div className="flex gap-4">
-              <div className="w-24">
-                <label className="block text-xs font-bold uppercase text-valorant-light mb-1">Logo</label>
-                <input
-                  type="text" name="logo" value={teamForm.logo} onChange={handleFormChange}
-                  className="w-full bg-valorant-dark-secondary border border-valorant-dark focus:border-valorant-red outline-none p-2 text-white text-center text-xl"
+            {/* El logo solo es editable en EDIT, no en CREATE: el endpoint
+                de upload necesita un team_id que aún no existe al crear. */}
+            {editingTeamId && (
+              <div>
+                <label className="block text-xs font-bold uppercase text-valorant-light mb-2">Logo</label>
+                <ImageUploader
+                  currentPath={editingTeamLogo}
+                  onUpload={async (file) => {
+                    const data = await routesAPI.uploadTeamLogo(editingTeamId, file);
+                    setEditingTeamLogo(data.logo);
+                    await loadAll();
+                  }}
+                  onDelete={async () => {
+                    await routesAPI.deleteTeamLogo(editingTeamId);
+                    setEditingTeamLogo(null);
+                    await loadAll();
+                  }}
+                  placeholder="team"
+                  label="Subir Logo"
                 />
               </div>
-              <div className="flex-1">
-                <label className="block text-xs font-bold uppercase text-valorant-light mb-1">Nombre</label>
-                <input
-                  type="text" name="name" required value={teamForm.name} onChange={handleFormChange}
-                  className="w-full bg-valorant-dark-secondary border border-valorant-dark focus:border-valorant-red outline-none p-2 text-white"
-                />
-              </div>
+            )}
+
+            <div>
+              <label className="block text-xs font-bold uppercase text-valorant-light mb-1">Nombre</label>
+              <input
+                type="text" name="name" required value={teamForm.name} onChange={handleFormChange}
+                className="w-full bg-valorant-dark-secondary border border-valorant-dark focus:border-valorant-red outline-none p-2 text-white"
+              />
             </div>
 
             <div className="grid grid-cols-2 gap-4">

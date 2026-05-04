@@ -16,8 +16,13 @@ export const routesAPI = {
   },
   updateMe(userData) { return requestAPI.put("/users/me", userData); },
 
+  // --- AVATAR (upload / delete) ---
+  uploadAvatar(file) { return requestAPI.upload("/users/me/avatar", file); },
+  deleteAvatar() { return requestAPI.del("/users/me/avatar"); },
+
   // --- PLAYERS (público — ranking de jugadores) ---
-  getPlayers() { return requestAPI.get("/users/players"); },
+  // params opcional: { sort_by: 'kd'|'adr'|'hs'|'clutches'|'kills'|'assists'|'matches', min_matches: int }
+  getPlayers(params) { return requestAPI.get("/users/players", params); },
 
   // --- NEWS ---
   getNews() { return requestAPI.get("/news"); },
@@ -31,6 +36,8 @@ export const routesAPI = {
   createTournament(data) { return requestAPI.post("/tournaments", data); },
   updateTournament(id, data) { return requestAPI.put(`/tournaments/${id}`, data); },
   deleteTournament(id) { return requestAPI.del(`/tournaments/${id}`); },
+  uploadTournamentImage(id, file) { return requestAPI.upload(`/tournaments/${id}/image`, file); },
+  deleteTournamentImage(id) { return requestAPI.del(`/tournaments/${id}/image`); },
 
   // --- MATCHES (anidados bajo tournament) ---
   getTournamentMatches(tournamentId) {
@@ -53,12 +60,15 @@ export const routesAPI = {
   },
 
   // --- TEAMS ---
-  getTeams() { return requestAPI.get("/teams"); },
+  // params opcional: { sort_by: 'wins'|'name'|'members' }. Default backend = 'wins'.
+  getTeams(params) { return requestAPI.get("/teams", params); },
   getTeamDetail(id) { return requestAPI.get(`/teams/${id}`); },
   getMyTeams() { return requestAPI.get("/teams/my"); },
   createTeam(data) { return requestAPI.post("/teams", data); },
   updateTeam(id, data) { return requestAPI.put(`/teams/${id}`, data); },
   deleteTeam(id) { return requestAPI.del(`/teams/${id}`); },
+  uploadTeamLogo(id, file) { return requestAPI.upload(`/teams/${id}/logo`, file); },
+  deleteTeamLogo(id) { return requestAPI.del(`/teams/${id}/logo`); },
   requestToJoin(teamId, joinData) { return requestAPI.post(`/teams/${teamId}/join`, joinData); },
 
   // Join requests (gestión por founder/admin)
@@ -75,6 +85,28 @@ export const routesAPI = {
   // Roster
   removeTeamMember(teamId, userId) {
     return requestAPI.del(`/teams/${teamId}/members/${userId}`);
+  },
+
+  // --- TOURNAMENT REGISTRATIONS (inscripción de equipos a torneos) ---
+  // status opcional para managers: 'pending'|'accepted'|'rejected'|'all'.
+  // Sin token o sin manager, el backend devuelve solo accepted.
+  listTournamentRegistrations(tournamentId, status) {
+    return requestAPI.get(
+      `/tournaments/${tournamentId}/registrations`,
+      status ? { status } : undefined
+    );
+  },
+  registerTeamToTournament(tournamentId, teamId) {
+    return requestAPI.post(`/tournaments/${tournamentId}/register`, { team_id: teamId });
+  },
+  acceptTournamentRegistration(tournamentId, regId) {
+    return requestAPI.post(`/tournaments/${tournamentId}/registrations/${regId}/accept`);
+  },
+  rejectTournamentRegistration(tournamentId, regId) {
+    return requestAPI.post(`/tournaments/${tournamentId}/registrations/${regId}/reject`);
+  },
+  deleteTournamentRegistration(tournamentId, regId) {
+    return requestAPI.del(`/tournaments/${tournamentId}/registrations/${regId}`);
   },
 
   // --- ADMIN (panel global, admin only) ---

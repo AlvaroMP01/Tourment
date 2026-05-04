@@ -106,6 +106,27 @@ class Tournament(db.Model):
 
     # Relationships
     matches = db.relationship('Match', backref='tournament', cascade="all, delete-orphan")
+    registrations = db.relationship('TournamentRegistration', backref='tournament', cascade="all, delete-orphan")
+
+
+class TournamentRegistration(db.Model):
+    """Inscripción de un equipo a un torneo. Dos caminos:
+    - Founder solicita -> status='pending', requested_by_user_id = founder.
+    - Admin agrega un team a un match sin registrarlo antes -> auto-create
+      con status='accepted' y requested_by_user_id = admin (atajo Opción 2).
+    Un equipo solo puede tener una inscripción por torneo (UNIQUE)."""
+    __tablename__ = 'tournament_registrations'
+    id = db.Column(db.Integer, primary_key=True)
+    tournament_id = db.Column(db.Integer, db.ForeignKey('tournaments.id', ondelete='CASCADE'), nullable=False)
+    team_id = db.Column(db.Integer, db.ForeignKey('teams.id', ondelete='CASCADE'), nullable=False)
+    status = db.Column(db.Enum('pending', 'accepted', 'rejected'), default='pending')
+    requested_by_user_id = db.Column(db.Integer, db.ForeignKey('users.id', ondelete='SET NULL'))
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    team = db.relationship('Team', foreign_keys=[team_id])
+    requested_by = db.relationship('User', foreign_keys=[requested_by_user_id])
+
+    __table_args__ = (db.UniqueConstraint('tournament_id', 'team_id', name='_tournament_team_uc'),)
 
 class Match(db.Model):
     __tablename__ = 'matches'

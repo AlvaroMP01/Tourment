@@ -1,15 +1,18 @@
 from flask import Blueprint, request, jsonify, current_app
+from sqlalchemy import case, func
 from extensions import db
-from models import Team, TeamMember, JoinRequest, User
+from models import Team, TeamMember, JoinRequest, User, Match
 from utils import token_required
+from uploads_helper import process_and_save, delete_upload, is_uploaded_path
 
 teams_bp = Blueprint('teams', __name__)
 
 # Plazas máximas por equipo (miembros con occupies_slot=True)
 MAX_TEAM_SLOTS = 7
 
-# Campos editables por PUT /teams/<id>
-TEAM_EDITABLE_FIELDS = ('name', 'tag', 'logo', 'region')
+# Campos editables por PUT /teams/<id>. logo se gestiona por su endpoint propio
+# (POST/DELETE /teams/<id>/logo) para evitar URLs externas arbitrarias.
+TEAM_EDITABLE_FIELDS = ('name', 'tag', 'region')
 
 
 def _team_founder_user_id(team_id):
@@ -32,17 +35,78 @@ def _can_manage_team(user, team_id):
 def _count_occupied_slots(team_id):
     return TeamMember.query.filter_by(team_id=team_id, occupies_slot=True).count()
 
+def _compute_team_records():
+    """Calcula wins / losses / matches_played por team a partir de matches
+    con status='finished'. Devuelve un dict {team_id: (wins, losses, played)}.
+
+    Una sola query con un GROUP BY por equipo evita el N+1 que tendríamos
+    iterando team por team. UNION ALL: cada match aparece dos veces (una por
+    cada team) con su flag de victoria/derrota."""
+    team1_rows = db.session.query(
+        Match.team1_id.label('team_id'),
+        case((Match.score_team1 > Match.score_team2, 1), else_=0).label('win'),
+        case((Match.score_team1 < Match.score_team2, 1), else_=0).label('loss'),
+    ).filter(Match.status == 'finished')
+
+    team2_rows = db.session.query(
+        Match.team2_id.label('team_id'),
+        case((Match.score_team2 > Match.score_team1, 1), else_=0).label('win'),
+        case((Match.score_team2 < Match.score_team1, 1), else_=0).label('loss'),
+    ).filter(Match.status == 'finished')
+
+    union = team1_rows.union_all(team2_rows).subquery()
+    rows = db.session.query(
+        union.c.team_id,
+        func.coalesce(func.sum(union.c.win), 0).label('wins'),
+        func.coalesce(func.sum(union.c.loss), 0).label('losses'),
+        func.count().label('played'),
+    ).group_by(union.c.team_id).all()
+
+    return {r.team_id: (int(r.wins), int(r.losses), int(r.played)) for r in rows}
+
+
+PUBLIC_TEAM_SORT_KEYS = ('wins', 'name', 'members')
+
+
 @teams_bp.route('', methods=['GET'])
 def get_teams():
+    """Listado público de equipos con record (wins/losses/matches_played).
+    Default sort = 'wins' DESC con desempate por win_rate y matches_played.
+    Query params: ?sort_by=wins|name|members"""
+    sort_by = request.args.get('sort_by', 'wins')
+    if sort_by not in PUBLIC_TEAM_SORT_KEYS:
+        return jsonify({
+            "error": f"sort_by inválido. Permitidos: {', '.join(PUBLIC_TEAM_SORT_KEYS)}"
+        }), 400
+
     teams = Team.query.all()
-    return jsonify([{
-        "id": t.id,
-        "name": t.name,
-        "tag": t.tag,
-        "logo": t.logo,
-        "region": t.region,
-        "member_count": len(t.members)
-    } for t in teams]), 200
+    records = _compute_team_records()
+
+    payload = []
+    for t in teams:
+        wins, losses, played = records.get(t.id, (0, 0, 0))
+        win_rate = (wins / played) if played else 0.0
+        payload.append({
+            "id": t.id,
+            "name": t.name,
+            "tag": t.tag,
+            "logo": t.logo,
+            "region": t.region,
+            "member_count": len(t.members),
+            "wins": wins,
+            "losses": losses,
+            "matches_played": played,
+            "win_rate": round(win_rate, 4),
+        })
+
+    if sort_by == 'wins':
+        payload.sort(key=lambda x: (-x['wins'], -x['win_rate'], -x['matches_played'], x['name'].lower()))
+    elif sort_by == 'members':
+        payload.sort(key=lambda x: (-x['member_count'], x['name'].lower()))
+    else:  # name
+        payload.sort(key=lambda x: x['name'].lower())
+
+    return jsonify(payload), 200
 
 @teams_bp.route('', methods=['POST'])
 @token_required
@@ -61,11 +125,11 @@ def create_team(current_user):
         return jsonify({"error": "Nombre y Tag son obligatorios"}), 400
     
     try:
-        # 3. Crear el equipo
+        # 3. Crear el equipo. El logo se sube después vía POST /teams/<id>/logo
+        # para evitar URLs externas arbitrarias.
         new_team = Team(
             name=data['name'],
             tag=data['tag'],
-            logo=data.get('logo'),
             region=data.get('region')
         )
         db.session.add(new_team)
@@ -220,14 +284,20 @@ def delete_team(current_user, team_id):
     if not _can_manage_team(current_user, team_id):
         return jsonify({"error": "Solo el fundador del equipo o un admin puede borrarlo"}), 403
 
+    # Capturo el logo antes del delete: el archivo físico no cae por CASCADE.
+    old_logo = team.logo
+
     try:
         db.session.delete(team)
         db.session.commit()
-        return jsonify({"mensaje": "Equipo borrado"}), 200
     except Exception:
         db.session.rollback()
         current_app.logger.exception("Error delete_team %s", team_id)
         return jsonify({"error": "No se pudo borrar el equipo"}), 500
+
+    if old_logo and is_uploaded_path(old_logo):
+        delete_upload(old_logo)
+    return jsonify({"mensaje": "Equipo borrado"}), 200
 
 
 # ----------------------------------------------------------------------
@@ -355,4 +425,62 @@ def remove_team_member(current_user, team_id, user_id):
         db.session.rollback()
         current_app.logger.exception("Error remove_team_member team=%s user=%s", team_id, user_id)
         return jsonify({"error": "No se pudo remover el miembro"}), 500
+
+
+# ----------------------------------------------------------------------
+# Logo: upload / delete (admin o founder)
+# ----------------------------------------------------------------------
+
+@teams_bp.route('/<int:team_id>/logo', methods=['POST'])
+@token_required
+def upload_team_logo(current_user, team_id):
+    team = Team.query.get_or_404(team_id)
+    if not _can_manage_team(current_user, team_id):
+        return jsonify({"error": "Solo el fundador del equipo o un admin puede editarlo"}), 403
+
+    if 'file' not in request.files:
+        return jsonify({"error": "Falta el archivo (campo 'file')"}), 400
+    file = request.files['file']
+    if not file or file.filename == '':
+        return jsonify({"error": "No se seleccionó archivo"}), 400
+
+    try:
+        new_path = process_and_save(file, 'team_logos')
+    except ValueError as e:
+        return jsonify({"error": str(e)}), 400
+
+    old_path = team.logo
+    try:
+        team.logo = new_path
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+        delete_upload(new_path)
+        current_app.logger.exception("Error guardando logo team %s", team_id)
+        return jsonify({"error": "No se pudo guardar el logo"}), 500
+
+    if old_path and is_uploaded_path(old_path) and old_path != new_path:
+        delete_upload(old_path)
+    return jsonify({"logo": new_path}), 200
+
+
+@teams_bp.route('/<int:team_id>/logo', methods=['DELETE'])
+@token_required
+def delete_team_logo(current_user, team_id):
+    team = Team.query.get_or_404(team_id)
+    if not _can_manage_team(current_user, team_id):
+        return jsonify({"error": "Solo el fundador del equipo o un admin puede editarlo"}), 403
+
+    old_path = team.logo
+    try:
+        team.logo = None
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+        current_app.logger.exception("Error borrando logo team %s", team_id)
+        return jsonify({"error": "No se pudo borrar el logo"}), 500
+
+    if old_path and is_uploaded_path(old_path):
+        delete_upload(old_path)
+    return jsonify({"logo": None}), 200
 

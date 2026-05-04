@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { routesAPI } from '../../services/routesAPI';
+import TeamLogo from '../TeamLogo';
 
 const AdminTeams = () => {
   const [teams, setTeams] = useState([]);
@@ -87,13 +88,11 @@ const AdminTeams = () => {
                 {teams.length > 0 ? teams.map(t => (
                   <tr key={t.id} className="border-b border-valorant-dark hover:bg-valorant-dark-secondary">
                     <td className="p-3 text-valorant-light">{t.id}</td>
-                    <td className="p-3 font-bold text-white flex items-center gap-2">
-                      <span className="text-xl flex items-center justify-center">
-                        {t.logo && t.logo.startsWith('http') ? (
-                          <img src={t.logo} alt="Logo" className="w-8 h-8 object-cover clip-corner-sm" />
-                        ) : (t.logo || '🎮')}
-                      </span>
-                      {t.name}
+                    <td className="p-3 font-bold text-white">
+                      <div className="flex items-center gap-2">
+                        <TeamLogo path={t.logo} size="xs" />
+                        {t.name}
+                      </div>
                     </td>
                     <td className="p-3 font-bold">[{t.tag}]</td>
                     <td className="p-3">{t.region || '-'}</td>

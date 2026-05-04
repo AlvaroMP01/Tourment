@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { routesAPI } from '../services/routesAPI';
 import Modal from '../components/Modal';
+import TeamLogo from '../components/TeamLogo';
 
 const ROLE_LABELS = {
   manager: 'Manager',
@@ -110,10 +111,8 @@ const TeamDetail = () => {
 
         <div className="bg-valorant-dark-secondary relative overflow-hidden clip-corner-sm mb-12 p-8 md:p-12 border-l-4 border-valorant-red">
           <div className="relative z-10 flex flex-col md:flex-row items-center md:items-start gap-8">
-            <div className="w-32 h-32 md:w-48 md:h-48 bg-valorant-dark flex items-center justify-center text-6xl md:text-8xl shadow-2xl clip-corner overflow-hidden">
-              {team.logo && team.logo.startsWith('http') ? (
-                <img src={team.logo} alt="Logo" className="w-full h-full object-cover" />
-              ) : (team.logo || '🎮')}
+            <div className="shadow-2xl">
+              <TeamLogo path={team.logo} size="xl" />
             </div>
             <div className="flex-1 text-center md:text-left">
               <div className="flex flex-col md:flex-row items-center gap-4 mb-4">

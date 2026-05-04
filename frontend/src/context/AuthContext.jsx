@@ -49,12 +49,24 @@ export const AuthProvider = ({ children }) => {
     localStorage.removeItem('token');
   };
 
+  // Refresca el usuario desde la API. Lo usan flujos como upload de avatar
+  // que cambian datos en el backend y necesitan que el contexto refleje el
+  // nuevo estado sin re-loguear.
+  const refreshUser = async () => {
+    if (!token) return null;
+    const userData = await routesAPI.getMe(token);
+    const normalized = normalizeUser(userData);
+    setUser(normalized);
+    return normalized;
+  };
+
   const value = {
     user,
     token,
     login,
     register,
     logout,
+    refreshUser,
     isAuthenticated: !!token,
     loading
   };

@@ -1,3 +1,5 @@
+import TeamLogo from './TeamLogo';
+
 const STATUS_LABEL = {
   live: { label: 'EN VIVO', cls: 'text-valorant-red' },
   scheduled: { label: 'PROGRAMADO', cls: 'text-valorant-gold' },
@@ -6,7 +8,6 @@ const STATUS_LABEL = {
 
 const safeName = (team) => team?.name || 'Equipo desconocido';
 const safeTag = (team) => team?.tag || '';
-const safeLogo = (team) => team?.logo || '🎮';
 
 const MatchCard = ({ match }) => {
   const score1 = match.score1 ?? null;
@@ -34,13 +35,7 @@ const MatchCard = ({ match }) => {
         {/* Team 1 */}
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-3 flex-1">
-            <div className="w-10 h-10 bg-valorant-dark-tertiary clip-corner-sm flex items-center justify-center text-xl overflow-hidden shadow-[inset_0_0_0_1px_rgba(255,255,255,0.1)]">
-              {String(safeLogo(team1)).startsWith('http') ? (
-                <img src={safeLogo(team1)} alt="Logo 1" className="w-full h-full object-cover" />
-              ) : (
-                safeLogo(team1)
-              )}
-            </div>
+            <TeamLogo path={team1.logo} size="sm" alt={`Logo ${safeName(team1)}`} />
             <div>
               <div className="text-white font-bold">{safeName(team1)}</div>
               <div className="text-xs text-valorant-light">{safeTag(team1)}</div>
@@ -61,13 +56,7 @@ const MatchCard = ({ match }) => {
         {/* Team 2 */}
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-3 flex-1">
-            <div className="w-10 h-10 bg-valorant-dark-tertiary clip-corner-sm flex items-center justify-center text-xl overflow-hidden shadow-[inset_0_0_0_1px_rgba(255,255,255,0.1)]">
-              {String(safeLogo(team2)).startsWith('http') ? (
-                <img src={safeLogo(team2)} alt="Logo 2" className="w-full h-full object-cover" />
-              ) : (
-                safeLogo(team2)
-              )}
-            </div>
+            <TeamLogo path={team2.logo} size="sm" alt={`Logo ${safeName(team2)}`} />
             <div>
               <div className="text-white font-bold">{safeName(team2)}</div>
               <div className="text-xs text-valorant-light">{safeTag(team2)}</div>

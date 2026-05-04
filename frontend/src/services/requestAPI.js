@@ -40,10 +40,15 @@ const request = async (
   let url = `${BASE_URL}${endpoint}`;
   if (params) url += `?${new URLSearchParams(params)}`;
 
+  // FormData maneja su propio Content-Type (incluido el boundary). Si lo
+  // seteamos a mano, el browser no agrega el boundary y el server falla.
+  const isFormData = typeof FormData !== "undefined" && body instanceof FormData;
+  const useJsonContentType = isJson && !isFormData;
+
   const response = await fetch(url, {
     method,
-    headers: getHeaders({ isJson, token }),
-    body: isJson && body ? JSON.stringify(body) : body,
+    headers: getHeaders({ isJson: useJsonContentType, token }),
+    body: useJsonContentType && body ? JSON.stringify(body) : body,
   });
 
   if (!response.ok) await handleError(response);
@@ -61,7 +66,15 @@ const put = (endpoint, body, isJson = true, options) =>
 const del = (endpoint, options) =>
   request(endpoint, { method: "DELETE", ...options });
 
-export const requestAPI = { get, post, put, del, request };
+// Helper específico para uploads multipart. Acepta un File y lo manda como
+// campo 'file' en un FormData.
+const upload = (endpoint, file, { method = "POST", token } = {}) => {
+  const fd = new FormData();
+  fd.append("file", file);
+  return request(endpoint, { method, body: fd, isJson: false, token });
+};
+
+export const requestAPI = { get, post, put, del, request, upload };
 
 export default requestAPI;
 

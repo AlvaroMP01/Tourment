@@ -31,7 +31,7 @@ from datetime import date, datetime, timedelta
 
 from app import app
 from extensions import db
-from models import User, UserStat, Team, TeamMember, Tournament, Match
+from models import User, UserStat, Team, TeamMember, Tournament, Match, TournamentRegistration
 from werkzeug.security import generate_password_hash
 
 
@@ -270,6 +270,20 @@ def seed_matches(tournament, red, blue):
         print(f"  EXISTS : tournament ya tiene {existing} match(es) — skip")
         return
 
+    # Creamos las inscripciones (ambos teams accepted) antes de los matches
+    # para que la UI muestre los equipos como inscriptos. Idempotente.
+    for team in (red, blue):
+        existing_reg = TournamentRegistration.query.filter_by(
+            tournament_id=tournament.id, team_id=team.id
+        ).first()
+        if not existing_reg:
+            db.session.add(TournamentRegistration(
+                tournament_id=tournament.id,
+                team_id=team.id,
+                status='accepted',
+            ))
+    db.session.commit()
+
     now = datetime.utcnow()
     matches_data = [
         dict(map_name='Ascent', round_name='Jornada 1', status='scheduled', match_date=now + timedelta(days=2)),
@@ -286,6 +300,7 @@ def seed_matches(tournament, red, blue):
     db.session.commit()
     print(f"  CREATED: {len(matches_data)} match(es) entre Red Phoenix y Blue Wolves")
     print(f"           (2 scheduled, 1 live — listos para testear /reportar)")
+    print(f"           Inscripciones (accepted) creadas para ambos teams")
 
 
 # ----------------------------------------------------------------------

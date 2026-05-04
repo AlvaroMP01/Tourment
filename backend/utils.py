@@ -67,3 +67,22 @@ def admin_required(f):
             return jsonify({"error": "Permisos de administrador requeridos"}), 403
         return f(current_user, *args, **kwargs)
     return decorated
+
+
+def try_get_user_from_request():
+    """Auth opcional: devuelve el User si el request trae un Bearer válido,
+    o None si no hay header o el token es inválido. Para endpoints que
+    cambian su respuesta según si el caller es manager/admin pero no
+    requieren auth obligatoria."""
+    auth_header = request.headers.get('Authorization', '')
+    parts = auth_header.split()
+    if len(parts) != 2 or parts[0].lower() != 'bearer':
+        return None
+    try:
+        data = jwt.decode(parts[1], _get_secret(), algorithms=['HS256'])
+    except jwt.PyJWTError:
+        return None
+    user_id = data.get('user_id')
+    if user_id is None:
+        return None
+    return User.query.get(user_id)

@@ -1,13 +1,13 @@
 import { useState, useEffect } from 'react';
 import { routesAPI } from '../../services/routesAPI';
 import Modal from '../Modal';
+import ImageUploader from '../ImageUploader';
 
 const emptyTournament = {
   name: '',
   start_date: '',
   end_date: '',
   status: 'upcoming',
-  image: '',
   prize_amount: '',
   prize_currency: 'EUR',
   description: '',
@@ -57,9 +57,9 @@ const AdminTournaments = () => {
     if (item) {
       // Backend devuelve null para campos opcionales vacíos; los inputs necesitan strings.
       // prize_amount viene como número o null; el input numérico necesita string vacío para "limpio".
+      // image se gestiona por su propio endpoint, no entra al payload del PUT.
       setEditing({
         ...item,
-        image: item.image || '',
         prize_amount: item.prize_amount != null ? String(item.prize_amount) : '',
         prize_currency: item.prize_currency || 'EUR',
         description: item.description || '',
@@ -90,12 +90,12 @@ const AdminTournaments = () => {
     const rawAmount = editing.prize_amount;
     const prizeAmount = rawAmount === '' || rawAmount == null ? null : Number(rawAmount);
 
+    // image NO va en el payload: se sube por POST /tournaments/<id>/image.
     const payload = {
       name: editing.name,
       start_date: editing.start_date,
       end_date: editing.end_date,
       status: editing.status,
-      image: editing.image,
       prize_amount: prizeAmount,
       prize_currency: prizeAmount ? editing.prize_currency : null,
       description: editing.description,
@@ -209,35 +209,47 @@ const AdminTournaments = () => {
               />
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            {/* La imagen solo es editable cuando el torneo ya existe: el
+                endpoint de upload necesita un id que aún no se creó al crear. */}
+            {editing.id && (
               <div>
-                <label className="block text-xs font-bold uppercase text-valorant-light mb-1">
-                  Imagen <span className="text-valorant-light/60 normal-case">(URL o emoji)</span>
-                </label>
-                <input
-                  type="text" name="image" value={editing.image} onChange={handleChange}
-                  placeholder="🏆  o  https://..."
-                  className="w-full bg-valorant-dark-secondary border border-valorant-dark focus:border-valorant-red outline-none p-2 text-white"
+                <label className="block text-xs font-bold uppercase text-valorant-light mb-2">Imagen</label>
+                <ImageUploader
+                  currentPath={editing.image}
+                  onUpload={async (file) => {
+                    const data = await routesAPI.uploadTournamentImage(editing.id, file);
+                    setEditing(prev => ({ ...prev, image: data.image }));
+                    await loadTournaments();
+                  }}
+                  onDelete={async () => {
+                    await routesAPI.deleteTournamentImage(editing.id);
+                    setEditing(prev => ({ ...prev, image: null }));
+                    await loadTournaments();
+                  }}
+                  placeholder="tournament"
+                  label="Subir Imagen"
+                  name={editing.name}
                 />
               </div>
-              <div>
-                <label className="block text-xs font-bold uppercase text-valorant-light mb-1">
-                  Premio <span className="text-valorant-light/60 normal-case">(monto, vacío = sin premio)</span>
-                </label>
-                <div className="flex gap-2">
-                  <input
-                    type="number" name="prize_amount" min="0" step="1"
-                    value={editing.prize_amount} onChange={handleChange}
-                    placeholder="10000"
-                    className="w-full bg-valorant-dark-secondary border border-valorant-dark focus:border-valorant-red outline-none p-2 text-white"
-                  />
-                  <select
-                    name="prize_currency" value={editing.prize_currency} onChange={handleChange}
-                    className="bg-valorant-dark-secondary border border-valorant-dark focus:border-valorant-red outline-none p-2 text-white"
-                  >
-                    {CURRENCY_OPTIONS.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
-                  </select>
-                </div>
+            )}
+
+            <div>
+              <label className="block text-xs font-bold uppercase text-valorant-light mb-1">
+                Premio <span className="text-valorant-light/60 normal-case">(monto, vacío = sin premio)</span>
+              </label>
+              <div className="flex gap-2">
+                <input
+                  type="number" name="prize_amount" min="0" step="1"
+                  value={editing.prize_amount} onChange={handleChange}
+                  placeholder="10000"
+                  className="w-full bg-valorant-dark-secondary border border-valorant-dark focus:border-valorant-red outline-none p-2 text-white"
+                />
+                <select
+                  name="prize_currency" value={editing.prize_currency} onChange={handleChange}
+                  className="bg-valorant-dark-secondary border border-valorant-dark focus:border-valorant-red outline-none p-2 text-white"
+                >
+                  {CURRENCY_OPTIONS.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
+                </select>
               </div>
             </div>
 

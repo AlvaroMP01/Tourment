@@ -36,6 +36,7 @@ services:
         condition: service_healthy
     volumes:
       - ./backend:/app:z # Vincula la carpeta local con la del contenedor.
+      - tourment_uploads:/app/uploads # Imágenes subidas (persistente, fuera del bind del código)
 
   # --- SERVICIO DE FRONTEND ---
   frontend:
@@ -72,6 +73,7 @@ services:
 # Definir el volumen para persistencia de datos
 volumes:
   mysql_data:
+  tourment_uploads:
 
 
 

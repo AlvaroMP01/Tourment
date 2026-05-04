@@ -1,13 +1,47 @@
 from decimal import Decimal, InvalidOperation
 from flask import Blueprint, request, jsonify, current_app
 from extensions import db
-from models import Tournament, Match, Team, TeamMember, MatchPlayerStat, UserStat
-from utils import token_required, role_required
+from models import Tournament, Match, Team, TeamMember, MatchPlayerStat, UserStat, TournamentRegistration
+from utils import token_required, role_required, try_get_user_from_request
+from uploads_helper import process_and_save, delete_upload, is_uploaded_path
 
 tournaments_bp = Blueprint('tournaments', __name__)
 
 # Roles autorizados para gestionar torneos (crear/programar matches/reportar resultados)
 TOURNAMENT_MANAGER_ROLES = ('admin', 'tournament_manager')
+
+
+def _team_founder_user_id(team_id):
+    """Founder = primer miembro por joined_at, luego id. Mismo criterio que en
+    routes/teams.py — duplicado acá para evitar import cruzado."""
+    first = (TeamMember.query
+             .filter_by(team_id=team_id)
+             .order_by(TeamMember.joined_at.asc(), TeamMember.id.asc())
+             .first())
+    return first.user_id if first else None
+
+
+def _is_tournament_manager(user):
+    return user.role in TOURNAMENT_MANAGER_ROLES
+
+
+def _ensure_registration(tournament_id, team_id, user_id, status='accepted'):
+    """Atajo Opción 2: si el admin agrega un team a un match sin inscripción
+    previa, se crea la inscripción auto-aceptada. Si ya existe (cualquier
+    status), no se toca para no pisar decisiones explícitas."""
+    existing = TournamentRegistration.query.filter_by(
+        tournament_id=tournament_id, team_id=team_id
+    ).first()
+    if existing:
+        return existing
+    reg = TournamentRegistration(
+        tournament_id=tournament_id,
+        team_id=team_id,
+        status=status,
+        requested_by_user_id=user_id,
+    )
+    db.session.add(reg)
+    return reg
 
 # Monedas aceptadas para prize_currency. Por ahora solo EUR (MVP España).
 # Cuando se internacionalice, expandir y resolver conversión en stats.
@@ -94,12 +128,13 @@ def create_tournament(current_user):
     prize_amount, prize_currency = prize_norm
 
     try:
+        # image se sube por separado vía POST /tournaments/<id>/image para
+        # evitar URLs externas arbitrarias.
         new_tournament = Tournament(
             name=data['name'],
             start_date=data['start_date'],
             end_date=data['end_date'],
             status=data.get('status', 'upcoming'),
-            image=data.get('image') or None,
             prize_amount=prize_amount,
             prize_currency=prize_currency,
             description=data.get('description') or None,
@@ -119,7 +154,9 @@ def update_tournament(current_user, tournament_id):
     tournament = Tournament.query.get_or_404(tournament_id)
     data = request.get_json() or {}
 
-    editable = ('name', 'start_date', 'end_date', 'status', 'image', 'description')
+    # image se gestiona por POST/DELETE /tournaments/<id>/image para evitar
+    # URLs externas arbitrarias.
+    editable = ('name', 'start_date', 'end_date', 'status', 'description')
     touched = False
     for f in editable:
         if f in data:
@@ -129,7 +166,7 @@ def update_tournament(current_user, tournament_id):
                 return jsonify({"error": "name no puede ser vacío"}), 400
             # Para campos opcionales string, vacío == NULL (limpiar el campo)
             value = data[f]
-            if f in ('image', 'description') and isinstance(value, str) and not value.strip():
+            if f == 'description' and isinstance(value, str) and not value.strip():
                 value = None
             setattr(tournament, f, value)
             touched = True
@@ -159,14 +196,21 @@ def update_tournament(current_user, tournament_id):
 @role_required(*TOURNAMENT_MANAGER_ROLES)
 def delete_tournament(current_user, tournament_id):
     tournament = Tournament.query.get_or_404(tournament_id)
+
+    # Capturo la imagen antes del delete: el archivo físico no cae por CASCADE.
+    old_image = tournament.image
+
     try:
         db.session.delete(tournament)
         db.session.commit()
-        return jsonify({"mensaje": "Torneo borrado"}), 200
     except Exception:
         db.session.rollback()
         current_app.logger.exception("Error delete_tournament %s", tournament_id)
         return jsonify({"error": "No se pudo borrar el torneo"}), 500
+
+    if old_image and is_uploaded_path(old_image):
+        delete_upload(old_image)
+    return jsonify({"mensaje": "Torneo borrado"}), 200
 
 @tournaments_bp.route('/<int:tournament_id>/matches', methods=['POST'])
 @token_required
@@ -175,7 +219,20 @@ def create_match(current_user, tournament_id):
     data = request.get_json() or {}
     if not data.get('team1_id') or not data.get('team2_id'):
         return jsonify({"error": "team1_id y team2_id son obligatorios"}), 400
+    if data['team1_id'] == data['team2_id']:
+        return jsonify({"error": "Un equipo no puede jugar contra sí mismo"}), 400
+
+    # Validar que los teams existan antes de tocar la registration
+    for tid in (data['team1_id'], data['team2_id']):
+        if not Team.query.get(tid):
+            return jsonify({"error": f"team_id {tid} no existe"}), 400
+
     try:
+        # Atajo Opción 2: si el admin agrega un team que no estaba inscripto,
+        # se crea la inscripción auto-aceptada en su nombre.
+        _ensure_registration(tournament_id, data['team1_id'], current_user.id, status='accepted')
+        _ensure_registration(tournament_id, data['team2_id'], current_user.id, status='accepted')
+
         new_match = Match(
             tournament_id=tournament_id,
             team1_id=data['team1_id'],
@@ -190,6 +247,7 @@ def create_match(current_user, tournament_id):
         return jsonify({"mensaje": "Partida programada", "id": new_match.id}), 201
     except Exception:
         db.session.rollback()
+        current_app.logger.exception("Error create_match tournament=%s", tournament_id)
         return jsonify({"error": "No se pudo programar la partida"}), 500
 
 @tournaments_bp.route('/<int:tournament_id>/matches/<int:match_id>', methods=['PUT'])
@@ -416,6 +474,61 @@ def report_match_results(current_user, tournament_id, match_id):
         return jsonify({"error": "No se pudo registrar el resultado"}), 500
 
 
+# ----------------------------------------------------------------------
+# Imagen de torneo: upload / delete (admin o tournament_manager)
+# ----------------------------------------------------------------------
+
+@tournaments_bp.route('/<int:tournament_id>/image', methods=['POST'])
+@token_required
+@role_required(*TOURNAMENT_MANAGER_ROLES)
+def upload_tournament_image(current_user, tournament_id):
+    tournament = Tournament.query.get_or_404(tournament_id)
+
+    if 'file' not in request.files:
+        return jsonify({"error": "Falta el archivo (campo 'file')"}), 400
+    file = request.files['file']
+    if not file or file.filename == '':
+        return jsonify({"error": "No se seleccionó archivo"}), 400
+
+    try:
+        new_path = process_and_save(file, 'tournament_images')
+    except ValueError as e:
+        return jsonify({"error": str(e)}), 400
+
+    old_path = tournament.image
+    try:
+        tournament.image = new_path
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+        delete_upload(new_path)
+        current_app.logger.exception("Error guardando imagen tournament %s", tournament_id)
+        return jsonify({"error": "No se pudo guardar la imagen"}), 500
+
+    if old_path and is_uploaded_path(old_path) and old_path != new_path:
+        delete_upload(old_path)
+    return jsonify({"image": new_path}), 200
+
+
+@tournaments_bp.route('/<int:tournament_id>/image', methods=['DELETE'])
+@token_required
+@role_required(*TOURNAMENT_MANAGER_ROLES)
+def delete_tournament_image(current_user, tournament_id):
+    tournament = Tournament.query.get_or_404(tournament_id)
+    old_path = tournament.image
+    try:
+        tournament.image = None
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+        current_app.logger.exception("Error borrando imagen tournament %s", tournament_id)
+        return jsonify({"error": "No se pudo borrar la imagen"}), 500
+
+    if old_path and is_uploaded_path(old_path):
+        delete_upload(old_path)
+    return jsonify({"image": None}), 200
+
+
 @tournaments_bp.route('/<int:tournament_id>/matches/<int:match_id>/stats', methods=['GET'])
 def get_match_stats(tournament_id, match_id):
     """Stats por jugador de una partida (público — para vista de match detail)."""
@@ -434,3 +547,165 @@ def get_match_stats(tournament_id, match_id):
             "hs_percentage": float(s.hs_percentage or 0),
         } for s in match.player_stats]
     }), 200
+
+
+# ----------------------------------------------------------------------
+# Inscripción de equipos a torneos (Opción 2: founder self-service +
+# atajo del admin vía create_match).
+# ----------------------------------------------------------------------
+
+def _serialize_registration(reg):
+    return {
+        "id": reg.id,
+        "tournament_id": reg.tournament_id,
+        "team_id": reg.team_id,
+        "team_name": reg.team.name if reg.team else None,
+        "team_tag": reg.team.tag if reg.team else None,
+        "team_logo": reg.team.logo if reg.team else None,
+        "status": reg.status,
+        "requested_by_user_id": reg.requested_by_user_id,
+        "created_at": reg.created_at.isoformat() if reg.created_at else None,
+    }
+
+
+@tournaments_bp.route('/<int:tournament_id>/register', methods=['POST'])
+@token_required
+def register_team_to_tournament(current_user, tournament_id):
+    """Founder solicita inscribir su equipo en un torneo.
+    El team_id viene en el body. Solo se permite si:
+    - el torneo está 'upcoming'
+    - el solicitante es el founder del team
+    - no hay una inscripción previa para ese (tournament, team)"""
+    tournament = Tournament.query.get_or_404(tournament_id)
+    if tournament.status != 'upcoming':
+        return jsonify({"error": "Solo se puede inscribir en torneos 'upcoming'"}), 409
+
+    data = request.get_json() or {}
+    team_id = data.get('team_id')
+    if not team_id:
+        return jsonify({"error": "team_id es obligatorio"}), 400
+
+    team = Team.query.get(team_id)
+    if not team:
+        return jsonify({"error": "Equipo no encontrado"}), 404
+
+    if _team_founder_user_id(team_id) != current_user.id and current_user.role != 'admin':
+        return jsonify({"error": "Solo el fundador del equipo (o un admin) puede inscribirlo"}), 403
+
+    existing = TournamentRegistration.query.filter_by(
+        tournament_id=tournament_id, team_id=team_id
+    ).first()
+    if existing:
+        return jsonify({
+            "error": f"Este equipo ya tiene una inscripción en este torneo (status={existing.status})"
+        }), 409
+
+    try:
+        reg = TournamentRegistration(
+            tournament_id=tournament_id,
+            team_id=team_id,
+            status='pending',
+            requested_by_user_id=current_user.id,
+        )
+        db.session.add(reg)
+        db.session.commit()
+        return jsonify({"mensaje": "Solicitud de inscripción enviada", "registration": _serialize_registration(reg)}), 201
+    except Exception:
+        db.session.rollback()
+        current_app.logger.exception("Error register_team_to_tournament t=%s team=%s", tournament_id, team_id)
+        return jsonify({"error": "No se pudo registrar la solicitud"}), 500
+
+
+@tournaments_bp.route('/<int:tournament_id>/registrations', methods=['GET'])
+def list_tournament_registrations(tournament_id):
+    """Lista de inscripciones. Público devuelve solo 'accepted'.
+    Admin/tournament_manager (con token válido) ve todos los status.
+    Acepta ?status=pending|accepted|rejected|all."""
+    Tournament.query.get_or_404(tournament_id)
+
+    user = try_get_user_from_request()
+    is_manager = bool(user and _is_tournament_manager(user))
+
+    # Si NO es manager, forzamos status='accepted' (sin importar lo que pida).
+    if not is_manager:
+        regs = (TournamentRegistration.query
+                .filter_by(tournament_id=tournament_id, status='accepted')
+                .all())
+        return jsonify([_serialize_registration(r) for r in regs]), 200
+
+    status_filter = request.args.get('status', 'all')
+    q = TournamentRegistration.query.filter_by(tournament_id=tournament_id)
+    if status_filter != 'all':
+        q = q.filter_by(status=status_filter)
+    return jsonify([_serialize_registration(r) for r in q.all()]), 200
+
+
+@tournaments_bp.route('/<int:tournament_id>/registrations/<int:reg_id>/accept', methods=['POST'])
+@token_required
+@role_required(*TOURNAMENT_MANAGER_ROLES)
+def accept_tournament_registration(current_user, tournament_id, reg_id):
+    reg = TournamentRegistration.query.filter_by(id=reg_id, tournament_id=tournament_id).first_or_404()
+    if reg.status != 'pending':
+        return jsonify({"error": f"La inscripción ya fue procesada (status={reg.status})"}), 409
+    try:
+        reg.status = 'accepted'
+        db.session.commit()
+        return jsonify({"mensaje": "Inscripción aceptada", "registration": _serialize_registration(reg)}), 200
+    except Exception:
+        db.session.rollback()
+        current_app.logger.exception("Error accept_registration t=%s reg=%s", tournament_id, reg_id)
+        return jsonify({"error": "No se pudo aceptar la inscripción"}), 500
+
+
+@tournaments_bp.route('/<int:tournament_id>/registrations/<int:reg_id>/reject', methods=['POST'])
+@token_required
+@role_required(*TOURNAMENT_MANAGER_ROLES)
+def reject_tournament_registration(current_user, tournament_id, reg_id):
+    reg = TournamentRegistration.query.filter_by(id=reg_id, tournament_id=tournament_id).first_or_404()
+    if reg.status != 'pending':
+        return jsonify({"error": f"La inscripción ya fue procesada (status={reg.status})"}), 409
+    try:
+        reg.status = 'rejected'
+        db.session.commit()
+        return jsonify({"mensaje": "Inscripción rechazada", "registration": _serialize_registration(reg)}), 200
+    except Exception:
+        db.session.rollback()
+        current_app.logger.exception("Error reject_registration t=%s reg=%s", tournament_id, reg_id)
+        return jsonify({"error": "No se pudo rechazar la inscripción"}), 500
+
+
+@tournaments_bp.route('/<int:tournament_id>/registrations/<int:reg_id>', methods=['DELETE'])
+@token_required
+def delete_tournament_registration(current_user, tournament_id, reg_id):
+    """Founder retira (solo si está pending y es su equipo) o admin/tournament_manager
+    remueve cualquier estado. Si hay matches del torneo con ese team_id, se bloquea
+    para evitar dejar matches con un team 'no inscripto'."""
+    reg = TournamentRegistration.query.filter_by(id=reg_id, tournament_id=tournament_id).first_or_404()
+
+    is_manager = _is_tournament_manager(current_user)
+    is_founder = _team_founder_user_id(reg.team_id) == current_user.id
+
+    if not is_manager:
+        if not is_founder:
+            return jsonify({"error": "No autorizado"}), 403
+        if reg.status != 'pending':
+            return jsonify({"error": "Solo se puede retirar una inscripción pendiente"}), 409
+
+    # Bloqueo: si el team ya tiene matches en este torneo, no se puede borrar.
+    has_matches = Match.query.filter(
+        Match.tournament_id == tournament_id,
+        ((Match.team1_id == reg.team_id) | (Match.team2_id == reg.team_id))
+    ).first() is not None
+    if has_matches:
+        return jsonify({
+            "error": "No se puede eliminar la inscripción: el equipo ya tiene partidas en este torneo"
+        }), 409
+
+    try:
+        db.session.delete(reg)
+        db.session.commit()
+        return jsonify({"mensaje": "Inscripción eliminada"}), 200
+    except Exception:
+        db.session.rollback()
+        current_app.logger.exception("Error delete_registration t=%s reg=%s", tournament_id, reg_id)
+        return jsonify({"error": "No se pudo eliminar la inscripción"}), 500

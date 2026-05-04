@@ -17,6 +17,12 @@ export default defineConfig(({ mode }) => {
         '/api': {
           target: apiUrl,
           changeOrigin: true
+        },
+        // Las imágenes subidas las sirve Flask en /uploads/<path>.
+        // Proxeamos para que el frontend las pida con paths relativos.
+        '/uploads': {
+          target: apiUrl,
+          changeOrigin: true
         }
       }
     }

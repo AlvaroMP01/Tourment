@@ -2,6 +2,12 @@ import { useState, useEffect, useMemo } from 'react';
 import { routesAPI } from '../services/routesAPI';
 import TeamCard from '../components/TeamCard';
 
+const SORT_OPTIONS = [
+  { value: 'wins', label: 'Victorias' },
+  { value: 'name', label: 'Nombre' },
+  { value: 'members', label: 'Miembros' },
+];
+
 const Teams = () => {
   const [teams, setTeams] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -10,30 +16,40 @@ const Teams = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedRegion, setSelectedRegion] = useState('all');
   const [availability, setAvailability] = useState('all');
-  const [sortBy, setSortBy] = useState('name');
+  const [sortBy, setSortBy] = useState('wins');
 
   useEffect(() => {
+    let cancelled = false;
     const load = async () => {
+      setLoading(true);
+      setError('');
       try {
-        const data = await routesAPI.getTeams();
-        setTeams(data);
+        const data = await routesAPI.getTeams({ sort_by: sortBy });
+        if (!cancelled) setTeams(data || []);
       } catch (err) {
-        setError(err.message || 'No se pudieron cargar los equipos');
+        if (!cancelled) setError(err.message || 'No se pudieron cargar los equipos');
       } finally {
-        setLoading(false);
+        if (!cancelled) setLoading(false);
       }
     };
     load();
-  }, []);
+    return () => { cancelled = true; };
+  }, [sortBy]);
 
   const uniqueRegions = useMemo(
     () => [...new Set(teams.map(t => t.region).filter(Boolean))],
     [teams]
   );
 
-  const filteredTeams = useMemo(() => {
+  // El backend ya viene ordenado. Asignamos rank visual y filtramos en cliente.
+  const ranked = useMemo(
+    () => teams.map((t, idx) => ({ ...t, rank: idx + 1 })),
+    [teams]
+  );
+
+  const filtered = useMemo(() => {
     const search = searchTerm.toLowerCase();
-    return teams.filter(team => {
+    return ranked.filter(team => {
       const matchesSearch =
         team.name.toLowerCase().includes(search) ||
         (team.tag || '').toLowerCase().includes(search) ||
@@ -46,19 +62,16 @@ const Teams = () => {
         (availability === 'full' && memberCount >= 7);
       return matchesSearch && matchesRegion && matchesAvailability;
     });
-  }, [teams, searchTerm, selectedRegion, availability]);
-
-  const sortedTeams = useMemo(() => {
-    const arr = [...filteredTeams];
-    if (sortBy === 'members') {
-      arr.sort((a, b) => (b.member_count ?? 0) - (a.member_count ?? 0));
-    } else {
-      arr.sort((a, b) => a.name.localeCompare(b.name));
-    }
-    return arr;
-  }, [filteredTeams, sortBy]);
+  }, [ranked, searchTerm, selectedRegion, availability]);
 
   const totalMembers = teams.reduce((acc, t) => acc + (t.member_count ?? 0), 0);
+  const totalMatches = teams.reduce((acc, t) => acc + (t.matches_played ?? 0), 0);
+
+  // Podio solo si el sort es wins (es el "ranking" verdadero).
+  const showPodium = sortBy === 'wins' && filtered.length > 0;
+  const podium = showPodium ? filtered.filter(t => t.rank <= 3 && (t.wins ?? 0) > 0) : [];
+  const podiumIds = new Set(podium.map(t => t.id));
+  const restTeams = showPodium ? filtered.filter(t => !podiumIds.has(t.id)) : filtered;
 
   if (loading) {
     return (
@@ -68,13 +81,19 @@ const Teams = () => {
     );
   }
 
+  const heroTitle = sortBy === 'wins' ? 'TOP EQUIPOS POR VICTORIAS' : 'EQUIPOS';
+
   return (
     <div className="min-h-screen bg-valorant-dark py-12">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="mb-12">
-          <h1 className="text-6xl font-tungsten text-white tracking-wider mb-4">EQUIPOS</h1>
+          <h1 className="text-6xl font-tungsten text-white tracking-wider mb-4">{heroTitle}</h1>
           <div className="h-1 w-32 bg-valorant-red mb-4"></div>
-          <p className="text-valorant-light text-lg">Descubre los equipos de la plataforma</p>
+          <p className="text-valorant-light text-lg">
+            {sortBy === 'wins'
+              ? 'Ranking según victorias en partidas finalizadas.'
+              : 'Descubre los equipos de la plataforma.'}
+          </p>
         </div>
 
         {error && (
@@ -113,19 +132,22 @@ const Teams = () => {
             value={sortBy}
             onChange={(e) => setSortBy(e.target.value)}
           >
-            <option value="name">Por Nombre</option>
-            <option value="members">Por Miembros</option>
+            {SORT_OPTIONS.map(o => <option key={o.value} value={o.value}>Ordenar: {o.label}</option>)}
           </select>
         </div>
 
-        <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-8">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
           <div className="card-valorant p-6 text-center">
             <div className="text-3xl font-tungsten text-valorant-red mb-2">{teams.length}</div>
-            <div className="text-sm text-valorant-light uppercase">Equipos Registrados</div>
+            <div className="text-sm text-valorant-light uppercase">Equipos</div>
           </div>
           <div className="card-valorant p-6 text-center">
             <div className="text-3xl font-tungsten text-valorant-red mb-2">{totalMembers}</div>
-            <div className="text-sm text-valorant-light uppercase">Miembros Activos</div>
+            <div className="text-sm text-valorant-light uppercase">Miembros</div>
+          </div>
+          <div className="card-valorant p-6 text-center">
+            <div className="text-3xl font-tungsten text-valorant-red mb-2">{totalMatches}</div>
+            <div className="text-sm text-valorant-light uppercase">Partidas Jugadas</div>
           </div>
           <div className="card-valorant p-6 text-center">
             <div className="text-3xl font-tungsten text-valorant-red mb-2">{uniqueRegions.length}</div>
@@ -133,17 +155,41 @@ const Teams = () => {
           </div>
         </div>
 
-        {sortedTeams.length > 0 ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {sortedTeams.map((team) => <TeamCard key={team.id} team={team} />)}
-          </div>
-        ) : (
+        {/* Podio top-3 (solo cuando sort=wins y hay equipos con victorias) */}
+        {podium.length > 0 && (
+          <>
+            <h2 className="text-2xl font-tungsten text-white tracking-wider mb-4">PODIO</h2>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
+              {podium.map((team) => (
+                <TeamCard key={team.id} team={team} rank={team.rank} highlightMetric="wins" />
+              ))}
+            </div>
+          </>
+        )}
+
+        {restTeams.length > 0 ? (
+          <>
+            {podium.length > 0 && (
+              <h2 className="text-2xl font-tungsten text-white tracking-wider mb-4">RESTO DE LA TABLA</h2>
+            )}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {restTeams.map((team) => (
+                <TeamCard
+                  key={team.id}
+                  team={team}
+                  rank={sortBy === 'wins' ? team.rank : undefined}
+                  highlightMetric={sortBy === 'wins' ? 'wins' : undefined}
+                />
+              ))}
+            </div>
+          </>
+        ) : podium.length === 0 ? (
           <div className="text-center py-20">
             <div className="text-6xl mb-4">🔍</div>
             <h3 className="text-2xl font-tungsten text-white mb-2">NO SE ENCONTRARON EQUIPOS</h3>
             <p className="text-valorant-light">Intenta ajustar tu búsqueda</p>
           </div>
-        )}
+        ) : null}
       </div>
     </div>
   );

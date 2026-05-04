@@ -1,9 +1,9 @@
 import os
-from flask import Flask, jsonify
+from flask import Flask, jsonify, send_from_directory
 from flask_cors import CORS
 from sqlalchemy import text
 from extensions import db
-from models import User, Team, Tournament, Match, TeamMember, UserStat, JoinRequest, UserAchievement
+from models import User, Team, Tournament, Match, TeamMember, UserStat, JoinRequest, UserAchievement, TournamentRegistration
 from news_scraper import NewsScraper
 from routes.auth import auth_bp
 from routes.teams import teams_bp
@@ -11,9 +11,18 @@ from routes.tournaments import tournaments_bp
 from routes.users import users_bp
 from routes.admin import admin_bp
 from routes.stats import stats_bp
+from uploads_helper import UPLOAD_ROOT, ensure_upload_dirs
 
 app = Flask(__name__)
 CORS(app)
+
+# Margen pre-procesamiento: el archivo ENTRA con hasta 1MB; el helper lo
+# recomprime hasta <=500KB antes de guardar. Pillow se encarga del resize.
+app.config['MAX_CONTENT_LENGTH'] = 1 * 1024 * 1024
+
+# Las carpetas de uploads se crean al arrancar — no asumimos que el volumen
+# montado las traiga. ensure_upload_dirs es idempotente.
+ensure_upload_dirs()
 
 # Clave para firmar/verificar JWT. DEBE venir de variable de entorno.
 # Sin SECRET_KEY válida, la app NO arranca: un fallback hardcodeado permitiría
@@ -53,6 +62,18 @@ scraper = NewsScraper()
 @app.route('/')
 def home():
     return jsonify({"mensaje": "El servidor Backend está funcionando correctamente."})
+
+@app.route('/uploads/<path:filename>')
+def serve_upload(filename):
+    """Sirve los archivos subidos. Público sin auth — los avatares, logos
+    y banners se muestran en páginas públicas."""
+    return send_from_directory(UPLOAD_ROOT, filename)
+
+@app.errorhandler(413)
+def handle_too_large(e):
+    return jsonify({
+        "error": "El archivo supera el tamaño máximo permitido (1MB)."
+    }), 413
 
 @app.route('/api/news')
 def get_news():

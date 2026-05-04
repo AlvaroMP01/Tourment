@@ -83,6 +83,22 @@ CREATE TABLE IF NOT EXISTS tournaments (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
+-- 6b. Inscripciones a Torneos (un equipo a un torneo)
+-- Founder solicita ('pending') o admin lo agrega de atajo ('accepted'
+-- al crear un match con un team_id no registrado).
+CREATE TABLE IF NOT EXISTS tournament_registrations (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    tournament_id INT NOT NULL,
+    team_id INT NOT NULL,
+    status ENUM('pending', 'accepted', 'rejected') DEFAULT 'pending',
+    requested_by_user_id INT, -- founder o admin que disparó el alta. SET NULL si se borra el user.
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (tournament_id) REFERENCES tournaments(id) ON DELETE CASCADE,
+    FOREIGN KEY (team_id) REFERENCES teams(id) ON DELETE CASCADE,
+    FOREIGN KEY (requested_by_user_id) REFERENCES users(id) ON DELETE SET NULL,
+    UNIQUE(tournament_id, team_id) -- un equipo, una inscripción por torneo
+);
+
 -- 7. Historial de Partidas (Matches)
 CREATE TABLE IF NOT EXISTS matches (
     id INT AUTO_INCREMENT PRIMARY KEY,
