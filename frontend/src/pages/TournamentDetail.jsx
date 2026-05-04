@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import MatchCard from '../components/MatchCard';
 import { routesAPI } from '../services/routesAPI';
+import { formatPrize } from '../services/adapters';
 
 const STATUS_BADGE = {
   live: { className: 'badge-live', label: '● EN VIVO' },
@@ -176,7 +177,7 @@ const TournamentDetail = () => {
               <div className="card-valorant p-6 text-center">
                 <div className="text-xs text-valorant-light uppercase mb-2">Premio</div>
                 <div className="text-2xl font-tungsten text-valorant-red">
-                  {tournament.prize || 'Por determinar'}
+                  {formatPrize(tournament.prize_amount, tournament.prize_currency)}
                 </div>
               </div>
               <div className="card-valorant p-6 text-center">

@@ -8,7 +8,8 @@ const emptyTournament = {
   end_date: '',
   status: 'upcoming',
   image: '',
-  prize: '',
+  prize_amount: '',
+  prize_currency: 'EUR',
   description: '',
 };
 
@@ -16,6 +17,11 @@ const STATUS_OPTIONS = [
   { value: 'upcoming', label: 'Próximamente' },
   { value: 'live', label: 'En Vivo' },
   { value: 'finished', label: 'Finalizado' },
+];
+
+// Solo EUR por ahora (MVP España). Si se internacionaliza, ampliar.
+const CURRENCY_OPTIONS = [
+  { value: 'EUR', label: '€ EUR' },
 ];
 
 const AdminTournaments = () => {
@@ -50,10 +56,12 @@ const AdminTournaments = () => {
   const handleOpenModal = (item = null) => {
     if (item) {
       // Backend devuelve null para campos opcionales vacíos; los inputs necesitan strings.
+      // prize_amount viene como número o null; el input numérico necesita string vacío para "limpio".
       setEditing({
         ...item,
         image: item.image || '',
-        prize: item.prize || '',
+        prize_amount: item.prize_amount != null ? String(item.prize_amount) : '',
+        prize_currency: item.prize_currency || 'EUR',
         description: item.description || '',
       });
     } else {
@@ -78,13 +86,18 @@ const AdminTournaments = () => {
     setError('');
     setSubmitting(true);
 
+    // prize_amount: string vacío → null (sin premio). Si tiene valor → número.
+    const rawAmount = editing.prize_amount;
+    const prizeAmount = rawAmount === '' || rawAmount == null ? null : Number(rawAmount);
+
     const payload = {
       name: editing.name,
       start_date: editing.start_date,
       end_date: editing.end_date,
       status: editing.status,
       image: editing.image,
-      prize: editing.prize,
+      prize_amount: prizeAmount,
+      prize_currency: prizeAmount ? editing.prize_currency : null,
       description: editing.description,
     };
 
@@ -209,13 +222,22 @@ const AdminTournaments = () => {
               </div>
               <div>
                 <label className="block text-xs font-bold uppercase text-valorant-light mb-1">
-                  Premio <span className="text-valorant-light/60 normal-case">(texto libre)</span>
+                  Premio <span className="text-valorant-light/60 normal-case">(monto, vacío = sin premio)</span>
                 </label>
-                <input
-                  type="text" name="prize" maxLength={100} value={editing.prize} onChange={handleChange}
-                  placeholder="€10.000, Premio simbólico..."
-                  className="w-full bg-valorant-dark-secondary border border-valorant-dark focus:border-valorant-red outline-none p-2 text-white"
-                />
+                <div className="flex gap-2">
+                  <input
+                    type="number" name="prize_amount" min="0" step="1"
+                    value={editing.prize_amount} onChange={handleChange}
+                    placeholder="10000"
+                    className="w-full bg-valorant-dark-secondary border border-valorant-dark focus:border-valorant-red outline-none p-2 text-white"
+                  />
+                  <select
+                    name="prize_currency" value={editing.prize_currency} onChange={handleChange}
+                    className="bg-valorant-dark-secondary border border-valorant-dark focus:border-valorant-red outline-none p-2 text-white"
+                  >
+                    {CURRENCY_OPTIONS.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
+                  </select>
+                </div>
               </div>
             </div>
 

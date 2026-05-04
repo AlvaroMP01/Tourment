@@ -76,8 +76,9 @@ CREATE TABLE IF NOT EXISTS tournaments (
     start_date DATE NOT NULL,
     end_date DATE NOT NULL,
     status ENUM('upcoming', 'live', 'finished') DEFAULT 'upcoming',
-    image VARCHAR(255), -- URL o emoji (mismo patrón que teams.logo)
-    prize VARCHAR(100), -- string libre: "€10.000", "Premio simbólico", etc.
+    image VARCHAR(255), -- emoji o path interno (/uploads/...)
+    prize_amount DECIMAL(10,2) DEFAULT NULL, -- monto del premio. NULL si no hay premio.
+    prize_currency CHAR(3) DEFAULT NULL, -- ISO 4217. Solo 'EUR' permitido en API por ahora.
     description TEXT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );

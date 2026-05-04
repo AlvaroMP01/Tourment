@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom';
+import { formatPrize } from '../services/adapters';
 
 const STATUS_BADGE = {
   live: { className: 'badge-live', label: '● EN VIVO' },
@@ -22,7 +23,14 @@ const TournamentCard = ({ tournament }) => {
   const endDate = tournament.endDate || tournament.end_date;
   const status = tournament.status;
   const badge = STATUS_BADGE[status] || null;
-  const { image, prize, description } = tournament;
+  const { image, description } = tournament;
+
+  // Prize: el adapter expone prizeAmount/prizeCurrency + prize formateado;
+  // el endpoint crudo expone prize_amount + prize_currency. Aceptamos ambas.
+  const prizeAmount = tournament.prizeAmount ?? tournament.prize_amount ?? null;
+  const prizeCurrency = tournament.prizeCurrency || tournament.prize_currency || null;
+  const hasPrize = prizeAmount != null && Number(prizeAmount) > 0;
+  const prizeText = tournament.prize || formatPrize(prizeAmount, prizeCurrency);
 
   return (
     <Link to={`/tournaments/${tournament.id}`} className="block group">
@@ -64,10 +72,10 @@ const TournamentCard = ({ tournament }) => {
           <div className="divider-glow mb-4"></div>
 
           <div className="grid grid-cols-2 gap-4 text-sm">
-            {prize ? (
+            {hasPrize ? (
               <div>
                 <div className="text-valorant-light opacity-70 uppercase text-xs mb-1">Premio</div>
-                <div className="text-valorant-red font-bold text-lg">{prize}</div>
+                <div className="text-valorant-red font-bold text-lg">{prizeText}</div>
               </div>
             ) : (
               <div>
@@ -77,15 +85,15 @@ const TournamentCard = ({ tournament }) => {
             )}
             <div>
               <div className="text-valorant-light opacity-70 uppercase text-xs mb-1">
-                {prize ? 'Inicio' : 'Fin'}
+                {hasPrize ? 'Inicio' : 'Fin'}
               </div>
               <div className="text-white font-bold">
-                {formatDate(prize ? startDate : endDate)}
+                {formatDate(hasPrize ? startDate : endDate)}
               </div>
             </div>
           </div>
 
-          {prize && (
+          {hasPrize && (
             <div className="mt-3 pt-3 border-t border-valorant-dark-tertiary text-xs text-valorant-light flex justify-between">
               <span>Fin:</span>
               <span className="text-white font-bold">{formatDate(endDate)}</span>

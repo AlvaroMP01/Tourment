@@ -22,6 +22,9 @@ export const routesAPI = {
   // --- NEWS ---
   getNews() { return requestAPI.get("/news"); },
 
+  // --- STATS (público — landing/Hero) ---
+  getStatsOverview() { return requestAPI.get("/stats/overview"); },
+
   // --- TOURNAMENTS ---
   getTournaments() { return requestAPI.get("/tournaments"); },
   getTournamentDetail(id) { return requestAPI.get(`/tournaments/${id}`); },

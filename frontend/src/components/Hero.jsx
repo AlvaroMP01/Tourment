@@ -1,6 +1,34 @@
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { routesAPI } from '../services/routesAPI';
+
+// Formato compacto para números: 1234 → "1.2K", 150000 → "150K".
+const COMPACT_NUMBER = new Intl.NumberFormat('es-ES', {
+  notation: 'compact',
+  maximumFractionDigits: 1,
+});
+
+const formatCount = (n) => {
+  if (n == null || Number.isNaN(Number(n))) return '—';
+  return COMPACT_NUMBER.format(Number(n));
+};
+
+const formatPrizeEur = (n) => {
+  if (n == null || Number.isNaN(Number(n)) || Number(n) === 0) return '€0';
+  return `€${COMPACT_NUMBER.format(Number(n))}`;
+};
 
 const Hero = () => {
+  const [stats, setStats] = useState(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    routesAPI.getStatsOverview()
+      .then((data) => { if (!cancelled) setStats(data); })
+      .catch(() => { if (!cancelled) setStats(null); });
+    return () => { cancelled = true; };
+  }, []);
+
   return (
     <div className="relative bg-animated pattern-overlay min-h-[600px] flex items-center overflow-hidden">
       {/* Geometric shapes background */}
@@ -37,22 +65,30 @@ const Hero = () => {
             </Link>
           </div>
 
-          {/* Stats */}
+          {/* Stats — datos reales del backend (/api/stats/overview) */}
           <div className="mt-16 grid grid-cols-2 md:grid-cols-4 gap-8 max-w-4xl mx-auto">
             <div className="card-valorant p-6 text-center">
-              <div className="text-4xl font-tungsten text-valorant-red mb-2">16</div>
+              <div className="text-4xl font-tungsten text-valorant-red mb-2">
+                {formatCount(stats?.active_tournaments)}
+              </div>
               <div className="text-sm text-valorant-light uppercase tracking-wider">Torneos Activos</div>
             </div>
             <div className="card-valorant p-6 text-center">
-              <div className="text-4xl font-tungsten text-valorant-red mb-2">250+</div>
+              <div className="text-4xl font-tungsten text-valorant-red mb-2">
+                {formatCount(stats?.total_teams)}
+              </div>
               <div className="text-sm text-valorant-light uppercase tracking-wider">Equipos</div>
             </div>
             <div className="card-valorant p-6 text-center">
-              <div className="text-4xl font-tungsten text-valorant-red mb-2">1.2K+</div>
+              <div className="text-4xl font-tungsten text-valorant-red mb-2">
+                {formatCount(stats?.total_players)}
+              </div>
               <div className="text-sm text-valorant-light uppercase tracking-wider">Jugadores</div>
             </div>
             <div className="card-valorant p-6 text-center">
-              <div className="text-4xl font-tungsten text-valorant-red mb-2">€150K</div>
+              <div className="text-4xl font-tungsten text-valorant-red mb-2">
+                {formatPrizeEur(stats?.total_prize_eur)}
+              </div>
               <div className="text-sm text-valorant-light uppercase tracking-wider">En Premios</div>
             </div>
           </div>

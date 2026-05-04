@@ -1,4 +1,4 @@
-from decimal import Decimal
+from decimal import Decimal, InvalidOperation
 from flask import Blueprint, request, jsonify, current_app
 from extensions import db
 from models import Tournament, Match, Team, TeamMember, MatchPlayerStat, UserStat
@@ -8,6 +8,35 @@ tournaments_bp = Blueprint('tournaments', __name__)
 
 # Roles autorizados para gestionar torneos (crear/programar matches/reportar resultados)
 TOURNAMENT_MANAGER_ROLES = ('admin', 'tournament_manager')
+
+# Monedas aceptadas para prize_currency. Por ahora solo EUR (MVP España).
+# Cuando se internacionalice, expandir y resolver conversión en stats.
+ALLOWED_CURRENCIES = ('EUR',)
+
+
+def _normalize_prize(amount, currency):
+    """Valida y normaliza prize_amount + prize_currency.
+    Devuelve ((amount_decimal_or_None, currency_or_None), None) en éxito,
+    o (None, error_str) en fallo.
+
+    Reglas:
+    - amount null/empty/0 → (None, None) — torneo sin premio.
+    - amount > 0 → currency obligatorio y en whitelist."""
+    if amount in ('', None):
+        return (None, None), None
+    try:
+        amount_dec = Decimal(str(amount))
+    except (InvalidOperation, ValueError):
+        return None, "prize_amount debe ser numérico"
+    if amount_dec < 0:
+        return None, "prize_amount no puede ser negativo"
+    if amount_dec == 0:
+        return (None, None), None
+    if not currency:
+        return None, "prize_currency es obligatorio cuando hay prize_amount"
+    if currency not in ALLOWED_CURRENCIES:
+        return None, f"Moneda '{currency}' no soportada (permitidas: {', '.join(ALLOWED_CURRENCIES)})"
+    return (amount_dec, currency), None
 
 @tournaments_bp.route('', methods=['GET'])
 def get_tournaments():
@@ -19,7 +48,8 @@ def get_tournaments():
         "end_date": t.end_date.isoformat(),
         "status": t.status,
         "image": t.image,
-        "prize": t.prize,
+        "prize_amount": float(t.prize_amount) if t.prize_amount is not None else None,
+        "prize_currency": t.prize_currency,
         "description": t.description,
     } for t in tournaments]), 200
 
@@ -33,7 +63,8 @@ def get_tournament_detail(tournament_id):
         "end_date": tournament.end_date.isoformat(),
         "status": tournament.status,
         "image": tournament.image,
-        "prize": tournament.prize,
+        "prize_amount": float(tournament.prize_amount) if tournament.prize_amount is not None else None,
+        "prize_currency": tournament.prize_currency,
         "description": tournament.description,
         "matches": [
             {
@@ -56,6 +87,12 @@ def create_tournament(current_user):
     data = request.get_json() or {}
     if not data.get('name') or not data.get('start_date') or not data.get('end_date'):
         return jsonify({"error": "name, start_date y end_date son obligatorios"}), 400
+
+    prize_norm, err = _normalize_prize(data.get('prize_amount'), data.get('prize_currency'))
+    if err:
+        return jsonify({"error": err}), 400
+    prize_amount, prize_currency = prize_norm
+
     try:
         new_tournament = Tournament(
             name=data['name'],
@@ -63,7 +100,8 @@ def create_tournament(current_user):
             end_date=data['end_date'],
             status=data.get('status', 'upcoming'),
             image=data.get('image') or None,
-            prize=data.get('prize') or None,
+            prize_amount=prize_amount,
+            prize_currency=prize_currency,
             description=data.get('description') or None,
         )
         db.session.add(new_tournament)
@@ -81,7 +119,7 @@ def update_tournament(current_user, tournament_id):
     tournament = Tournament.query.get_or_404(tournament_id)
     data = request.get_json() or {}
 
-    editable = ('name', 'start_date', 'end_date', 'status', 'image', 'prize', 'description')
+    editable = ('name', 'start_date', 'end_date', 'status', 'image', 'description')
     touched = False
     for f in editable:
         if f in data:
@@ -89,12 +127,20 @@ def update_tournament(current_user, tournament_id):
                 return jsonify({"error": "status inválido"}), 400
             if f == 'name' and (not isinstance(data[f], str) or not data[f].strip()):
                 return jsonify({"error": "name no puede ser vacío"}), 400
-            # Para campos opcionales, string vacío == NULL (limpiar el campo)
+            # Para campos opcionales string, vacío == NULL (limpiar el campo)
             value = data[f]
-            if f in ('image', 'prize', 'description') and isinstance(value, str) and not value.strip():
+            if f in ('image', 'description') and isinstance(value, str) and not value.strip():
                 value = None
             setattr(tournament, f, value)
             touched = True
+
+    # prize_amount y prize_currency se procesan juntos (son atómicos).
+    if 'prize_amount' in data or 'prize_currency' in data:
+        prize_norm, err = _normalize_prize(data.get('prize_amount'), data.get('prize_currency'))
+        if err:
+            return jsonify({"error": err}), 400
+        tournament.prize_amount, tournament.prize_currency = prize_norm
+        touched = True
 
     if not touched:
         return jsonify({"error": "Nada para actualizar"}), 400

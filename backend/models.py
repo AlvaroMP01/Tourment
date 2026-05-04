@@ -98,8 +98,9 @@ class Tournament(db.Model):
     start_date = db.Column(db.Date, nullable=False)
     end_date = db.Column(db.Date, nullable=False)
     status = db.Column(db.Enum('upcoming', 'live', 'finished'), default='upcoming')
-    image = db.Column(db.String(255))     # URL o emoji
-    prize = db.Column(db.String(100))     # string libre
+    image = db.Column(db.String(255))           # emoji o path interno (/uploads/...)
+    prize_amount = db.Column(db.Numeric(10, 2)) # monto del premio. NULL si no hay.
+    prize_currency = db.Column(db.String(3))    # ISO 4217. Por ahora solo 'EUR' aceptado en API.
     description = db.Column(db.Text)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 

@@ -3,6 +3,18 @@
  * Esto protege al frontend de cambios en la estructura de la API.
  */
 
+const PRIZE_NUMBER_FORMAT = new Intl.NumberFormat('es-ES', { maximumFractionDigits: 0 });
+const CURRENCY_SYMBOL = { EUR: '€' };
+
+export const formatPrize = (amount, currency) => {
+  // null/undefined/0 → torneo sin premio
+  if (amount == null || amount === '' || Number(amount) === 0) return 'Por determinar';
+  const num = typeof amount === 'string' ? parseFloat(amount) : amount;
+  if (Number.isNaN(num)) return 'Por determinar';
+  const symbol = CURRENCY_SYMBOL[currency] || currency || '';
+  return `${symbol}${PRIZE_NUMBER_FORMAT.format(num)}`;
+};
+
 export const userAdapter = (apiUser) => {
   if (!apiUser) return null;
   return {
@@ -31,7 +43,9 @@ export const tournamentAdapter = (apiTournament) => {
     endDate: apiTournament.end_date,
     status: apiTournament.status,
     image: apiTournament.image || null,
-    prize: apiTournament.prize || 'Por determinar',
+    prizeAmount: apiTournament.prize_amount ?? null,
+    prizeCurrency: apiTournament.prize_currency || null,
+    prize: formatPrize(apiTournament.prize_amount, apiTournament.prize_currency),
     description: apiTournament.description || null,
   };
 };

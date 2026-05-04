@@ -10,6 +10,7 @@ from routes.teams import teams_bp
 from routes.tournaments import tournaments_bp
 from routes.users import users_bp
 from routes.admin import admin_bp
+from routes.stats import stats_bp
 
 app = Flask(__name__)
 CORS(app)
@@ -45,6 +46,7 @@ app.register_blueprint(teams_bp, url_prefix='/api/teams')
 app.register_blueprint(tournaments_bp, url_prefix='/api/tournaments')
 app.register_blueprint(users_bp, url_prefix='/api/users')
 app.register_blueprint(admin_bp, url_prefix='/api/admin')
+app.register_blueprint(stats_bp, url_prefix='/api/stats')
 
 scraper = NewsScraper()
 
