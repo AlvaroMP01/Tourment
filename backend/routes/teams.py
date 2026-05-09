@@ -209,7 +209,7 @@ def request_to_join(current_user, team_id):
     if existing_member:
         return jsonify({"error": "Ya eres miembro de este equipo"}), 400
 
-    existing_request = JoinRequest.query.filter_by(team_id=team_id, user_id=current_user.id).first()
+    existing_request = JoinRequest.query.filter_by(team_id=team_id, user_id=current_user.id, status='pending').first()
     if existing_request:
         return jsonify({"error": "Ya hay una solicitud pendiente"}), 400
 

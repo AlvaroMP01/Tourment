@@ -161,7 +161,7 @@ const Home = () => {
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Link to="/tournaments" className="btn-valorant">Inscribirse Ahora</Link>
-            <Link to="/teams" className="btn-valorant bg-transparent border-2 border-valorant-red hover:bg-valorant-red">
+            <Link to="/my-teams" className="btn-valorant bg-transparent border-2 border-valorant-red hover:bg-valorant-red">
               Crear Equipo
             </Link>
           </div>
