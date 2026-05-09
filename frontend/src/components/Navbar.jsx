@@ -15,8 +15,7 @@ const Navbar = () => {
     { name: 'Noticias', path: '/news' }
   ];
 
-  // Admin no tiene equipo propio — la sección no aplica para ese rol.
-  if (user && user.role !== 'admin') {
+  if (user && ['player', 'coach', 'player_coach'].includes(user.role)) {
     navItems.push({ name: 'Mis Equipos', path: '/my-teams' });
   }
 
@@ -34,22 +33,24 @@ const Navbar = () => {
     <nav className="bg-valorant-dark-secondary border-b-2 border-valorant-dark-tertiary sticky top-0 z-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-20">
-          {/* Logo */}
           <Link to="/" className="flex items-center space-x-3 group">
-            <div className="w-12 h-12 bg-valorant-red clip-corner flex items-center justify-center group-hover:animate-glow transition-all">
-              <span className="text-2xl font-bold text-white">V</span>
+            <div className="w-12 h-12 flex items-center justify-center group-hover:animate-glow transition-all">
+              <img
+                src="/favicon.png"
+                alt="Tourment logo"
+                className="w-full h-full object-contain"
+              />
             </div>
             <div>
               <h1 className="text-2xl font-tungsten text-white tracking-wider">
                 TOURMENT
               </h1>
               <p className="text-xs text-valorant-light opacity-70 -mt-1">
-                VALORANT TOURNAMENT PLATFORM
+                PLATAFORMA DE TORNEOS DE VALORANT
               </p>
             </div>
           </Link>
 
-          {/* Desktop Navigation */}
           <div className="hidden md:flex items-center space-x-1">
             {navItems.map((item) => (
               <Link
@@ -87,7 +88,6 @@ const Navbar = () => {
             )}
           </div>
 
-          {/* Mobile menu button */}
           <button
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
             className="md:hidden text-valorant-light hover:text-white p-2"
@@ -111,7 +111,6 @@ const Navbar = () => {
         </div>
       </div>
 
-      {/* Mobile Navigation */}
       {mobileMenuOpen && (
         <div className="md:hidden bg-valorant-dark-tertiary border-t border-valorant-dark-tertiary animate-fade-in">
           <div className="px-2 pt-2 pb-3 space-y-1">

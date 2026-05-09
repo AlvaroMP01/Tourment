@@ -28,7 +28,6 @@ const News = () => {
   return (
     <div className="min-h-screen bg-valorant-dark py-12">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        {/* Header */}
         <div className="mb-12">
           <h1 className="text-4xl md:text-6xl font-tungsten text-white tracking-wider mb-4">
             NOTICIAS
@@ -39,7 +38,6 @@ const News = () => {
           </p>
         </div>
 
-        {/* News Grid */}
         {loading ? (
           <LoadingSpinner size="lg" />
         ) : error ? (
@@ -82,7 +80,6 @@ const News = () => {
           </div>
         )}
 
-        {/* RSS Attribution */}
         {vlrNews.length > 0 && (
           <div className="mt-12 text-center">
             <p className="text-valorant-light text-sm">

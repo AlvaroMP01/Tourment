@@ -31,7 +31,6 @@ const AdminReportMatchModal = ({ tournamentId, match, teamsCatalog, isOpen, onCl
 
   const [scoreTeam1, setScoreTeam1] = useState('');
   const [scoreTeam2, setScoreTeam2] = useState('');
-  // userId -> stats
   const [playerStats, setPlayerStats] = useState({});
 
   const [submitting, setSubmitting] = useState(false);
@@ -42,7 +41,6 @@ const AdminReportMatchModal = ({ tournamentId, match, teamsCatalog, isOpen, onCl
     return t ? `${t.name} [${t.tag}]` : `#${id}`;
   };
 
-  // Reset + fetch member rosters cada vez que abro el modal con un match nuevo
   useEffect(() => {
     if (!isOpen || !match) return;
 
@@ -62,7 +60,6 @@ const AdminReportMatchModal = ({ tournamentId, match, teamsCatalog, isOpen, onCl
         if (cancelled) return;
         setTeam1(t1);
         setTeam2(t2);
-        // Inicializar stats vacías para cada miembro "jugable" (ocupa plaza y rol player/player_coach)
         const initial = {};
         [...t1.members, ...t2.members].forEach(m => {
           if (m.occupies_slot && PLAYABLE_ROLES.has(m.role)) {
@@ -108,7 +105,7 @@ const AdminReportMatchModal = ({ tournamentId, match, teamsCatalog, isOpen, onCl
 
     const selected = Object.entries(playerStats).filter(([, v]) => v.selected);
     if (selected.length === 0) {
-      return { error: 'Marcá al menos un jugador para reportar stats' };
+      return { error: 'Marca al menos un jugador para reportar stats' };
     }
 
     const players = [];
@@ -251,7 +248,7 @@ const AdminReportMatchModal = ({ tournamentId, match, teamsCatalog, isOpen, onCl
       ) : (
         <form onSubmit={handleSubmit} className="space-y-4">
           <p className="text-xs text-valorant-light italic">
-            Marcá los jugadores que participaron y completá sus stats. Reportar es irreversible:
+            Marca los jugadores que participaron y completa sus stats. Reportar es irreversible:
             marca el match como <strong className="text-white">finished</strong> y suma los stats a los agregados de cada player.
           </p>
 

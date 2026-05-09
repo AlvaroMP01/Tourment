@@ -112,7 +112,6 @@ def list_players():
             "kd": round(_kd(s.kills if s else 0, s.deaths if s else 0), 2),
         }
 
-        # Filtro de partidas mínimas (excepto si min_matches=0 explícito)
         if stats['matches_played'] < min_matches:
             continue
 
@@ -147,7 +146,7 @@ def update_my_profile(current_user):
             current_user.custom_name = data['custom_name']
         if 'bio' in data:
             current_user.bio = data['bio']
-        # avatar NO se actualiza por acá: ahora se sube vía
+        # avatar NO se actualiza por aquí: ahora se sube vía
         # POST /users/me/avatar para evitar URLs externas arbitrarias.
 
         db.session.commit()
@@ -156,10 +155,6 @@ def update_my_profile(current_user):
         db.session.rollback()
         return jsonify({"error": str(e)}), 500
 
-
-# ----------------------------------------------------------------------
-# Avatar: upload / delete
-# ----------------------------------------------------------------------
 
 @users_bp.route('/me/avatar', methods=['POST'])
 @token_required

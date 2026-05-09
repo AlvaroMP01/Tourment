@@ -35,7 +35,6 @@ const AdminMatches = () => {
     setTimeout(() => setSuccess(''), 3000);
   };
 
-  // Carga inicial: tournaments + teams (catálogos para los selects)
   useEffect(() => {
     const loadCatalogs = async () => {
       setLoading(true);
@@ -56,7 +55,6 @@ const AdminMatches = () => {
     loadCatalogs();
   }, []);
 
-  // Cargar matches del tournament seleccionado
   useEffect(() => {
     if (!selectedTournament) return;
     const loadMatches = async () => {
@@ -79,7 +77,7 @@ const AdminMatches = () => {
 
   const handleOpenModal = (item = null) => {
     if (item) {
-      // Backend devuelve match_date como ISO o null. Lo paso a 'YYYY-MM-DDTHH:mm' para datetime-local
+      // match_date llega como ISO (o null); datetime-local necesita 'YYYY-MM-DDTHH:mm'.
       const dt = item.date ? new Date(item.date).toISOString().slice(0, 16) : '';
       setEditing({
         id: item.id,
@@ -149,7 +147,7 @@ const AdminMatches = () => {
       setError('No se puede borrar un match finalizado (sus stats afectan UserStat)');
       return;
     }
-    if (!window.confirm('¿Borrar este match?')) return;
+    if (!window.confirm('¿Borrar este partido?')) return;
     try {
       await routesAPI.deleteMatch(selectedTournament, match.id);
       flashSuccess('Match borrado');
@@ -257,7 +255,7 @@ const AdminMatches = () => {
       </div>
 
       <p className="text-xs text-valorant-light mt-4 italic">
-        Usá el botón <strong className="text-valorant-gold">Reportar</strong> para registrar el resultado y las stats por jugador.
+        Usa el botón <strong className="text-valorant-gold">Reportar</strong> para registrar el resultado y las stats por jugador.
         Las stats no se editan a mano — se calculan automáticamente desde lo reportado.
       </p>
 
@@ -332,7 +330,7 @@ const AdminMatches = () => {
                 >
                   {STATUS_OPTIONS.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
                 </select>
-                <p className="text-xs text-valorant-light mt-1 italic">'finished' se setea al reportar resultado</p>
+                <p className="text-xs text-valorant-light mt-1 italic">'finished' se asigna al reportar resultado</p>
               </div>
             </div>
 

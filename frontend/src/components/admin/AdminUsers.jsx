@@ -111,7 +111,7 @@ const AdminUsers = () => {
                       <td className="p-3 text-valorant-light">{u.id}</td>
                       <td className="p-3 font-bold text-white">
                         {u.nickname}
-                        {isMe && <span className="ml-2 text-xs text-valorant-red font-normal">(VOS)</span>}
+                        {isMe && <span className="ml-2 text-xs text-valorant-red font-normal">(TÚ)</span>}
                       </td>
                       <td className={`p-3 font-bold uppercase ${roleColor(u.role)}`}>
                         {roleLabel(u.role)}
@@ -122,7 +122,7 @@ const AdminUsers = () => {
                           disabled={isMe || isBusy}
                           onChange={(e) => handleRoleChange(u, e.target.value)}
                           className="bg-valorant-dark border border-valorant-red/30 text-white p-2 font-bold uppercase focus:border-valorant-red focus:outline-none transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-                          title={isMe ? 'No podés cambiar tu propio rol' : ''}
+                          title={isMe ? 'No puedes cambiar tu propio rol' : ''}
                         >
                           {ROLE_OPTIONS.map(r => (
                             <option key={r.value} value={r.value}>{r.label}</option>
@@ -132,7 +132,7 @@ const AdminUsers = () => {
                           onClick={() => handleDelete(u)}
                           disabled={isMe || isBusy}
                           className="text-valorant-red hover:text-white font-bold uppercase transition-colors px-3 py-2 bg-valorant-dark hover:bg-valorant-red/20 border border-valorant-red/30 disabled:opacity-40 disabled:cursor-not-allowed"
-                          title={isMe ? 'No podés borrarte a vos mismo' : 'Eliminar usuario'}
+                          title={isMe ? 'No puedes borrarte a ti mismo' : 'Eliminar usuario'}
                         >
                           Eliminar
                         </button>
@@ -151,7 +151,7 @@ const AdminUsers = () => {
       </div>
 
       <p className="text-xs text-valorant-light mt-4 italic">
-        El sistema impide degradar o borrar al último admin. Tampoco podés modificar tu propio rol —
+        El sistema impide degradar o borrar al último admin. Tampoco puedes modificar tu propio rol —
         debe hacerlo otro admin.
       </p>
     </div>

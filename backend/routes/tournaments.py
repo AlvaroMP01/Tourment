@@ -10,13 +10,12 @@ from uploads_helper import process_and_save, delete_upload, is_uploaded_path
 
 tournaments_bp = Blueprint('tournaments', __name__)
 
-# Roles autorizados para gestionar torneos (crear/programar matches/reportar resultados)
 TOURNAMENT_MANAGER_ROLES = ('admin', 'tournament_manager')
 
 
 def _team_founder_user_id(team_id):
     """Founder = primer miembro por joined_at, luego id. Mismo criterio que en
-    routes/teams.py — duplicado acá para evitar import cruzado."""
+    routes/teams.py — duplicado aquí para evitar import cruzado."""
     first = (TeamMember.query
              .filter_by(team_id=team_id)
              .order_by(TeamMember.joined_at.asc(), TeamMember.id.asc())
@@ -29,7 +28,7 @@ def _is_tournament_manager(user):
 
 
 def _ensure_registration(tournament_id, team_id, user_id, status='accepted'):
-    """Atajo Opción 2: si el admin agrega un team a un match sin inscripción
+    """Atajo Opción 2: si el admin añade un team a un match sin inscripción
     previa, se crea la inscripción auto-aceptada. Si ya existe (cualquier
     status), no se toca para no pisar decisiones explícitas."""
     existing = TournamentRegistration.query.filter_by(
@@ -150,8 +149,6 @@ def create_tournament(current_user):
     prize_amount, prize_currency = prize_norm
 
     try:
-        # image se sube por separado vía POST /tournaments/<id>/image para
-        # evitar URLs externas arbitrarias.
         new_tournament = Tournament(
             name=data['name'],
             start_date=data['start_date'],
@@ -176,8 +173,7 @@ def update_tournament(current_user, tournament_id):
     tournament = Tournament.query.get_or_404(tournament_id)
     data = request.get_json() or {}
 
-    # image se gestiona por POST/DELETE /tournaments/<id>/image para evitar
-    # URLs externas arbitrarias.
+    # image se gestiona por endpoint propio para evitar URLs externas arbitrarias.
     editable = ('name', 'start_date', 'end_date', 'status', 'description')
     touched = False
     for f in editable:
@@ -186,7 +182,6 @@ def update_tournament(current_user, tournament_id):
                 return jsonify({"error": "status inválido"}), 400
             if f == 'name' and (not isinstance(data[f], str) or not data[f].strip()):
                 return jsonify({"error": "name no puede ser vacío"}), 400
-            # Para campos opcionales string, vacío == NULL (limpiar el campo)
             value = data[f]
             if f == 'description' and isinstance(value, str) and not value.strip():
                 value = None
@@ -219,7 +214,7 @@ def update_tournament(current_user, tournament_id):
 def delete_tournament(current_user, tournament_id):
     tournament = Tournament.query.get_or_404(tournament_id)
 
-    # Capturo la imagen antes del delete: el archivo físico no cae por CASCADE.
+    # Guarda la imagen antes del delete: el archivo físico no cae por CASCADE.
     old_image = tournament.image
 
     try:
@@ -238,12 +233,11 @@ def delete_tournament(current_user, tournament_id):
 @token_required
 @role_required(*TOURNAMENT_MANAGER_ROLES)
 def create_match(current_user, tournament_id):
-    # Si el torneo tiene un bracket generado, no se permite crear matches sueltos
-    # — todos los partidos los maneja el bracket.
+    # Con bracket activo, todos los partidos los maneja el bracket.
     tournament = Tournament.query.get_or_404(tournament_id)
     if tournament.bracket_size is not None:
         return jsonify({
-            "error": "El torneo tiene un bracket activo. Borrá el bracket antes de crear matches manuales."
+            "error": "El torneo tiene un bracket activo. Borra el bracket antes de crear matches manuales."
         }), 409
 
     data = request.get_json() or {}
@@ -252,14 +246,12 @@ def create_match(current_user, tournament_id):
     if data['team1_id'] == data['team2_id']:
         return jsonify({"error": "Un equipo no puede jugar contra sí mismo"}), 400
 
-    # Validar que los teams existan antes de tocar la registration
     for tid in (data['team1_id'], data['team2_id']):
         if not Team.query.get(tid):
             return jsonify({"error": f"team_id {tid} no existe"}), 400
 
     try:
-        # Atajo Opción 2: si el admin agrega un team que no estaba inscrito,
-        # se crea la inscripción auto-aceptada en su nombre.
+        # Atajo Opción 2: admin añade team sin inscripción → se auto-acepta.
         _ensure_registration(tournament_id, data['team1_id'], current_user.id, status='accepted')
         _ensure_registration(tournament_id, data['team2_id'], current_user.id, status='accepted')
 
@@ -293,12 +285,11 @@ def update_match(current_user, tournament_id, match_id):
             "error": "El match ya fue reportado. Las ediciones post-reporte requieren un flujo de corrección dedicado."
         }), 409
 
-    # Matches del bracket no se editan a mano: cambiar team1/team2 rompe el árbol.
-    # Si admin necesita cambios, debe borrar el bracket entero y regenerarlo.
+    # Editar un match de bracket rompe el árbol: hay que regenerar entero.
     if match.bracket_round is not None:
         return jsonify({
-            "error": "Este match es parte del bracket — no se puede editar individualmente. "
-                     "Borrá el bracket completo si necesitás regenerarlo."
+            "error": "Este partido es parte del bracket. No se puede editar individualmente. "
+                     "Borra el bracket completo si necesitas regenerarlo."
         }), 409
 
     data = request.get_json() or {}
@@ -309,10 +300,10 @@ def update_match(current_user, tournament_id, match_id):
         if f in data:
             if f == 'status' and data[f] not in ('scheduled', 'live', 'finished'):
                 return jsonify({"error": "status inválido"}), 400
-            # No permitir setear status='finished' por acá: eso pasa al reportar resultados
+            # status='finished' solo se establece al reportar resultados
             if f == 'status' and data[f] == 'finished':
                 return jsonify({
-                    "error": "Para marcar un match como finished usá POST /matches/<id>/results"
+                    "error": "Para marcar un match como finished usa POST /matches/<id>/results"
                 }), 400
             setattr(match, f, data[f])
             touched = True
@@ -334,7 +325,7 @@ def update_match(current_user, tournament_id, match_id):
 @role_required(*TOURNAMENT_MANAGER_ROLES)
 def delete_match(current_user, tournament_id, match_id):
     """Borra un match. Bloquea borrado si ya está finished — los stats agregados
-    de cada jugador ya fueron sumados a UserStat y borrar acá los desincronizaría
+    de cada jugador ya fueron sumados a UserStat y borrar aquí los desincronizaría
     (los MatchPlayerStat se borrarían por CASCADE pero UserStat no se rebobina)."""
     match = Match.query.filter_by(id=match_id, tournament_id=tournament_id).first_or_404()
 
@@ -343,10 +334,10 @@ def delete_match(current_user, tournament_id, match_id):
             "error": "No se puede borrar un match ya reportado. Sus stats afectan UserStat."
         }), 409
 
-    # Matches del bracket no se borran de a uno: rompe el árbol. Borrar bracket entero.
+    # Borrar un match del bracket rompe el árbol: hay que borrar el bracket entero.
     if match.bracket_round is not None:
         return jsonify({
-            "error": "Este match es parte del bracket — borrá el bracket entero desde DELETE /tournaments/<id>/bracket."
+            "error": "Este partido es parte del bracket. Borra el bracket entero desde DELETE /tournaments/<id>/bracket."
         }), 409
 
     try:
@@ -453,7 +444,6 @@ def report_match_results(current_user, tournament_id, match_id):
     if not isinstance(players_payload, list) or len(players_payload) == 0:
         return jsonify({"error": "Se requiere una lista 'players' con al menos una entrada"}), 400
 
-    # Pre-cargo los user_ids autorizados (miembros de team1 o team2)
     allowed_user_ids = {
         m.user_id for m in TeamMember.query.filter(
             TeamMember.team_id.in_([match.team1_id, match.team2_id])
@@ -499,7 +489,6 @@ def report_match_results(current_user, tournament_id, match_id):
 
             user_stat = UserStat.query.get(p['user_id'])
             if not user_stat:
-                # El usuario existe (validado por allowed_user_ids) pero no tiene fila en user_stats
                 user_stat = UserStat(user_id=p['user_id'])
                 db.session.add(user_stat)
                 db.session.flush()
@@ -515,7 +504,7 @@ def report_match_results(current_user, tournament_id, match_id):
             )
 
         # Avance automático del ganador en el bracket. Solo si el match es parte
-        # del bracket (next_match_id seteado). El slot destino lo dice next_match_slot.
+        # del bracket (next_match_id definido). El slot destino lo dice next_match_slot.
         if match.next_match_id is not None and match.next_match_slot in ('team1', 'team2'):
             winner_team_id = match.team1_id if score1 > score2 else match.team2_id
             next_match = Match.query.get(match.next_match_id)
@@ -536,10 +525,6 @@ def report_match_results(current_user, tournament_id, match_id):
         current_app.logger.exception("Error reportando resultado de match %s", match_id)
         return jsonify({"error": "No se pudo registrar el resultado"}), 500
 
-
-# ----------------------------------------------------------------------
-# Imagen de torneo: upload / delete (admin o tournament_manager)
-# ----------------------------------------------------------------------
 
 @tournaments_bp.route('/<int:tournament_id>/image', methods=['POST'])
 @token_required
@@ -611,11 +596,6 @@ def get_match_stats(tournament_id, match_id):
         } for s in match.player_stats]
     }), 200
 
-
-# ----------------------------------------------------------------------
-# Inscripción de equipos a torneos (Opción 2: founder self-service +
-# atajo del admin vía create_match).
-# ----------------------------------------------------------------------
 
 def _serialize_registration(reg):
     return {
@@ -689,7 +669,6 @@ def list_tournament_registrations(tournament_id):
     user = try_get_user_from_request()
     is_manager = bool(user and _is_tournament_manager(user))
 
-    # Si NO es manager, forzamos status='accepted' (sin importar lo que pida).
     if not is_manager:
         regs = (TournamentRegistration.query
                 .filter_by(tournament_id=tournament_id, status='accepted')
@@ -774,14 +753,6 @@ def delete_tournament_registration(current_user, tournament_id, reg_id):
         return jsonify({"error": "No se pudo eliminar la inscripción"}), 500
 
 
-# ----------------------------------------------------------------------
-# Bracket de eliminación directa (single-elim).
-# Tamaños permitidos: 4, 8 o 16 equipos (potencias de 2 estrictas).
-# El admin/manager genera el bracket cuando los equipos aceptados coinciden
-# con uno de esos tamaños. Una vez generado, los matches se llenan
-# automáticamente al reportar resultados (ver report_match_results).
-# ----------------------------------------------------------------------
-
 ALLOWED_BRACKET_SIZES = (4, 8, 16)
 
 
@@ -813,7 +784,7 @@ def generate_bracket(current_user, tournament_id):
     existing_matches = Match.query.filter_by(tournament_id=tournament_id).first()
     if existing_matches is not None:
         return jsonify({
-            "error": "El torneo tiene matches creados manualmente. Borralos antes de generar un bracket."
+            "error": "El torneo tiene partidos creados manualmente. Bórralos antes de generar un bracket."
         }), 409
 
     accepted = (TournamentRegistration.query
@@ -836,8 +807,7 @@ def generate_bracket(current_user, tournament_id):
     random.shuffle(team_ids)
 
     try:
-        # Crear todos los matches del bracket. Por ronda: round 1 tiene size/2,
-        # round 2 tiene size/4, etc. Total = size - 1 matches.
+        # round 1 tiene size/2 matches, round 2 size/4, etc. Total = size - 1.
         matches_by_round = {}
         for r in range(1, rounds_count + 1):
             count_in_round = size // (2 ** r)
@@ -850,20 +820,17 @@ def generate_bracket(current_user, tournament_id):
                     round_name=_bracket_round_name(size, r),
                     status='scheduled',
                 )
-                # Round 1: setear los teams desde el shuffle. Las rondas siguientes
-                # arrancan con team1/team2 = NULL — se llenan al reportar el ganador.
+                # Las rondas posteriores arrancan vacías y se llenan al reportar ganadores.
                 if r == 1:
                     m.team1_id = team_ids[(pos - 1) * 2]
                     m.team2_id = team_ids[(pos - 1) * 2 + 1]
                 matches_by_round[r].append(m)
                 db.session.add(m)
 
-        # Flush para obtener IDs antes de linkear next_match_id.
         db.session.flush()
 
-        # Linkear: para cada match de round r (no la última), su ganador avanza
-        # al match de round r+1 en posición ceil(pos/2). Slot team1 si pos impar,
-        # team2 si pos par. La final (último round) tiene next_match_id=NULL.
+        # Avance: ganador de round r posición pos → round r+1 posición ceil(pos/2),
+        # slot team1 si pos impar, team2 si par. La final tiene next_match_id=NULL.
         for r in range(1, rounds_count):
             for idx, m in enumerate(matches_by_round[r]):
                 pos = idx + 1
@@ -908,9 +875,7 @@ def delete_bracket(current_user, tournament_id):
         }), 409
 
     try:
-        # Borrar primero los matches que apuntan como next_match_id a otros
-        # quedaría feo por la FK. SET NULL on delete del FK lo resuelve, pero
-        # para ser explícito limpiamos en orden inverso de rondas.
+        # Orden inverso de rondas para respetar la FK next_match_id explícitamente.
         matches = (Match.query
                    .filter_by(tournament_id=tournament_id)
                    .order_by(Match.bracket_round.desc().nullslast())

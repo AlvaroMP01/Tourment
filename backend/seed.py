@@ -27,7 +27,7 @@ Idempotente:
 - Cada paso verifica existencia antes de crear; re-correr no duplica datos.
 - NO se siembran matches `finished` a propósito: reportar resultados muta
   agregados en `UserStat` y romper la idempotencia es trivial al re-correr.
-  Para testear el flujo de reporte, hacelo desde el panel admin.
+  Para probar el flujo de reporte, hazlo desde el panel admin.
 """
 import os
 import sys
@@ -43,10 +43,6 @@ MIN_PASSWORD_LENGTH = 8
 DEFAULT_USER_PASSWORD = 'password123'
 MAX_TEAM_SLOTS = 7
 
-
-# ----------------------------------------------------------------------
-# Helpers
-# ----------------------------------------------------------------------
 
 def _get_user_by_nickname(nickname):
     return User.query.filter_by(nickname=nickname).first()
@@ -71,8 +67,8 @@ def upsert_test_user(nickname, role, password):
 
 
 def add_player_to_team(team, player, ingame_role, favorite_agent):
-    """Agrega un player como miembro del team si no pertenece a otro y hay plaza.
-    Devuelve True si lo agregó, False si lo skipeó."""
+    """Añade un player como miembro del team si no pertenece a otro y hay plaza.
+    Devuelve True si lo añadió, False si lo saltó."""
     if TeamMember.query.filter_by(user_id=player.id).first():
         return False
     occupied = TeamMember.query.filter_by(team_id=team.id, occupies_slot=True).count()
@@ -90,17 +86,13 @@ def add_player_to_team(team, player, ingame_role, favorite_agent):
     return True
 
 
-# ----------------------------------------------------------------------
-# Steps
-# ----------------------------------------------------------------------
-
 def seed():
     nickname = os.getenv('ADMIN_NICKNAME', 'admin').strip()
     password = os.getenv('ADMIN_PASSWORD', '')
     force_reset = os.getenv('ADMIN_FORCE_RESET') == '1'
 
     if not password:
-        print("ERROR: ADMIN_PASSWORD no definida. Exportala antes de correr este script.", file=sys.stderr)
+        print("ERROR: ADMIN_PASSWORD no definida. Expórtala antes de ejecutar este script.", file=sys.stderr)
         sys.exit(1)
 
     if len(password) < MIN_PASSWORD_LENGTH:
@@ -112,7 +104,7 @@ def seed():
     if existing and not force_reset:
         if existing.role != 'admin':
             print(f"WARN: usuario '{nickname}' existe con role='{existing.role}', no es admin. "
-                  "Usá ADMIN_FORCE_RESET=1 para forzar promoción y reset de contraseña.")
+                  "Usa ADMIN_FORCE_RESET=1 para forzar promoción y reset de contraseña.")
             sys.exit(2)
         print(f"OK: admin '{nickname}' ya existe. Sin cambios.")
         return existing
@@ -213,12 +205,12 @@ def seed_team(name, tag, region, logo, founder):
 def seed_team_rosters(red, blue, green, yellow, players):
     """Llena los 4 teams con players de prueba. Cada player solo se asigna
     si no pertenece ya a otro team. El team puede tener miembros desde un
-    seed previo: en ese caso simplemente no agrega nada.
+    seed previo: en ese caso simplemente no añade nada.
 
     Distribución (asume players ordenados player_01..player_18):
     - Red Phoenix    (coach, 0 plazas ocupadas) → players[0:5]   = player_01..05
     - Blue Wolves    (player_coach, 1 plaza)    → players[5:9]   = player_06..09
-    - player[9] = player_10 queda libre (para testear join_request)
+    - player[9] = player_10 queda libre (para probar join_request)
     - Green Hawks    (coach, 0 plazas ocupadas) → players[10:15] = player_11..15
     - Yellow Tigers  (player_coach, 1 plaza)    → players[15:19] = player_16..19
     """
@@ -321,7 +313,7 @@ def seed_bracket_tournament(teams, name='Bracket de Pruebas 2026'):
         image='🥇',
         prize_amount=5000,
         prize_currency='EUR',
-        description=f'Torneo listo para generar bracket de eliminación directa con {len(teams)} equipos. Probá el botón "Generar bracket" en la pestaña Bracket.',
+        description=f'Torneo listo para generar bracket de eliminación directa con {len(teams)} equipos. Prueba el botón "Generar bracket" en la pestaña Bracket.',
     )
     db.session.add(t)
     db.session.flush()
@@ -335,14 +327,14 @@ def seed_bracket_tournament(teams, name='Bracket de Pruebas 2026'):
     db.session.commit()
     print(f"  CREATED: tournament '{name}' (upcoming, {today} → {today + timedelta(days=7)})")
     print(f"           {len(teams)} team(s) inscritos (accepted): {', '.join(tm.name for tm in teams)}")
-    print(f"           SIN matches — generá el bracket desde la UI")
+    print(f"           SIN matches — genera el bracket desde la UI")
     return t
 
 
 def seed_matches(tournament, red, blue):
     """Siembra matches scheduled/live entre los 2 teams. NO siembra finished:
     reportar resultados muta UserStat agregado y romper idempotencia al
-    re-correr es trivial. El flujo de reporte se testea desde el panel admin."""
+    re-ejecutar es trivial. El flujo de reporte se prueba desde el panel admin."""
     if not tournament or not red or not blue:
         print("  SKIP   : faltan tournament/team(s), no se crean matches")
         return
@@ -381,13 +373,9 @@ def seed_matches(tournament, red, blue):
         ))
     db.session.commit()
     print(f"  CREATED: {len(matches_data)} match(es) entre Red Phoenix y Blue Wolves")
-    print(f"           (2 scheduled, 1 live — listos para testear /reportar)")
+    print(f"           (2 scheduled, 1 live — listos para probar /reportar)")
     print(f"           Inscripciones (accepted) creadas para ambos teams")
 
-
-# ----------------------------------------------------------------------
-# Main
-# ----------------------------------------------------------------------
 
 def main():
     user_password = os.getenv('SEED_USER_PASSWORD', DEFAULT_USER_PASSWORD)
@@ -437,7 +425,7 @@ def main():
         print(f"  coach_yellow  role=player_coach   (founder Yellow Tigers, ocupa plaza)")
         print(f"  player_01..05 → Red Phoenix")
         print(f"  player_06..09 → Blue Wolves")
-        print(f"  player_10     → libre (para testear flujo de join_request)")
+        print(f"  player_10     → libre (para probar flujo de join_request)")
         print(f"  player_11..15 → Green Hawks")
         print(f"  player_16..19 → Yellow Tigers")
 

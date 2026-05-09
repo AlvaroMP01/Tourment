@@ -66,7 +66,7 @@ const Admin = () => {
             <div className="card-valorant p-8">
               {ActiveComponent ? <ActiveComponent /> : (
                 <div className="text-center text-valorant-light py-8">
-                  No tenés acceso a esta sección.
+                  No tienes acceso a esta sección.
                 </div>
               )}
             </div>

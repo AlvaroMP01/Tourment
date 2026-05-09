@@ -36,7 +36,7 @@ const ImageUploader = ({
 
   const validateFile = (file) => {
     if (!ACCEPTED_TYPES.includes(file.type)) {
-      return 'Formato no permitido. Subí JPG, PNG o WEBP.';
+      return 'Formato no permitido. Sube JPG, PNG o WEBP.';
     }
     if (file.size > MAX_BYTES_CLIENT) {
       return 'El archivo es demasiado grande. Máximo 1MB.';
@@ -46,7 +46,7 @@ const ImageUploader = ({
 
   const handleFileSelected = async (e) => {
     const file = e.target.files?.[0];
-    e.target.value = ''; // permite re-subir el mismo archivo si re-elige
+    e.target.value = ''; // permite re-subir el mismo archivo si vuelve a elegirlo
     if (!file) return;
 
     const validationError = validateFile(file);

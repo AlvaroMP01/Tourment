@@ -1,10 +1,5 @@
-// Helpers para distinguir imágenes subidas (path interno) de strings legacy
-// (emoji o URL externa). El backend hoy no permite URLs externas; los datos
-// legacy en la DB pueden tener cualquier cosa, así que el frontend solo
-// renderiza <img> si el path empieza con uno de los prefijos conocidos.
-//
-// La URL final es relativa (/uploads/...) — Vite proxea a Flask en dev, y
-// en prod nginx hace el mismo passthrough. Misma estrategia que /api.
+// Distingue paths subidos de strings legacy (emoji o URL externa). Solo
+// renderizamos <img> si el path empieza con un prefijo conocido.
 
 const UPLOAD_PREFIXES = ['avatars/', 'team_logos/', 'tournament_images/'];
 

@@ -13,7 +13,6 @@ const Tournaments = () => {
     const fetchTournaments = async () => {
       try {
         const data = await routesAPI.getTournaments();
-        // Transform raw API data using the adapter
         const adaptedTournaments = data.map(tournamentAdapter);
         setTournaments(adaptedTournaments);
       } catch (err) {

@@ -52,9 +52,9 @@ def update_user_role(current_user, user_id):
         return jsonify({"error": "No se puede degradar al último admin del sistema"}), 409
 
     # Auto-degradación: prevenir que un admin se quite a sí mismo el rol por error.
-    # Si lo querés hacer, debe ser otro admin quien lo haga.
+    # Si quieres hacerlo, debe ser otro admin quien lo haga.
     if target.id == current_user.id and new_role != 'admin':
-        return jsonify({"error": "No podés cambiar tu propio rol. Pedile a otro admin."}), 403
+        return jsonify({"error": "No puedes cambiar tu propio rol. Pídele a otro admin."}), 403
 
     try:
         target.role = new_role
@@ -72,12 +72,12 @@ def delete_user(current_user, user_id):
     target = User.query.get_or_404(user_id)
 
     if target.id == current_user.id:
-        return jsonify({"error": "No podés borrar tu propia cuenta desde acá"}), 403
+        return jsonify({"error": "No puedes borrar tu propia cuenta desde aquí"}), 403
 
     if target.role == 'admin' and _admin_count() <= 1:
         return jsonify({"error": "No se puede borrar al último admin del sistema"}), 409
 
-    # Capturo el avatar antes del delete: el commit borra la fila en DB pero
+    # Guarda el avatar antes del delete: el commit borra la fila en DB pero
     # el archivo físico hay que limpiarlo a mano para no dejar huérfanos.
     old_avatar = target.avatar
 

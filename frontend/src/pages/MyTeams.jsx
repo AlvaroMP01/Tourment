@@ -32,13 +32,11 @@ const emptyTeamForm = {
 const MyTeams = () => {
   const { user } = useAuth();
 
-  // Cada elemento: { ...teamDetail, joinRequests: JoinRequest[] | null }
   const [teams, setTeams] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
 
-  // Crear / editar team
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingTeamId, setEditingTeamId] = useState(null);
   const [editingTeamLogo, setEditingTeamLogo] = useState(null);
@@ -55,7 +53,6 @@ const MyTeams = () => {
     setError('');
     try {
       const myTeams = await routesAPI.getMyTeams();
-      // Enriquezco cada team con detalle + join requests si soy founder
       const enriched = await Promise.all(myTeams.map(async (t) => {
         const detail = await routesAPI.getTeamDetail(t.id);
         const iAmFounder = detail.founder_user_id === user?.id;
@@ -79,8 +76,6 @@ const MyTeams = () => {
 
   useEffect(() => { loadAll(); }, [loadAll]);
 
-  // El backend exige role coach o player_coach para crear equipo,
-  // y solo permite UN equipo por usuario.
   const canCreateTeam =
     user && ['coach', 'player_coach'].includes(user.role) && teams.length === 0;
 
@@ -335,12 +330,12 @@ const MyTeams = () => {
             <h2 className="text-2xl font-tungsten text-valorant-light mb-4">AÚN NO TIENES EQUIPO</h2>
             {canCreateTeam ? (
               <>
-                <p className="text-gray-400 mb-6">Funda tu propio equipo y empezá a reclutar jugadores.</p>
+                <p className="text-gray-400 mb-6">Funda tu propio equipo y empieza a reclutar jugadores.</p>
                 <button onClick={openCreateForm} className="btn-valorant">Fundar Equipo</button>
               </>
             ) : user?.role === 'player' ? (
               <p className="text-gray-400">
-                Como <strong className="text-white">player</strong>, tenés que solicitar unirte a un equipo
+                Como <strong className="text-white">player</strong>, tienes que solicitar unirte a un equipo
                 desde la <a href="/teams" className="text-valorant-red font-bold">lista de equipos</a>.
               </p>
             ) : (
@@ -357,8 +352,7 @@ const MyTeams = () => {
           title={editingTeamId ? 'Editar Equipo' : 'Fundar Nuevo Equipo'}
         >
           <form onSubmit={handleSaveTeam} className="space-y-4">
-            {/* El logo solo es editable en EDIT, no en CREATE: el endpoint
-                de upload necesita un team_id que aún no existe al crear. */}
+            {/* Logo solo en EDIT: el upload necesita un team_id existente. */}
             {editingTeamId && (
               <div>
                 <label className="block text-xs font-bold uppercase text-valorant-light mb-2">Logo</label>

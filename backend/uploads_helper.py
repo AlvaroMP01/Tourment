@@ -21,7 +21,6 @@ ALLOWED_FORMATS = {'JPEG', 'PNG', 'WEBP'}
 
 
 def ensure_upload_dirs():
-    """Crea las carpetas de uploads si no existen. Idempotente."""
     for folder in ALLOWED_FOLDERS:
         (UPLOAD_ROOT / folder).mkdir(parents=True, exist_ok=True)
 
@@ -77,7 +76,6 @@ def process_and_save(file_storage, folder):
 
     img.thumbnail(MAX_DIMENSIONS, Image.Resampling.LANCZOS)
 
-    # Compresión adaptativa: bajamos quality hasta entrar en MAX_BYTES.
     buffer = io.BytesIO()
     quality = 85
     while quality >= 30:
@@ -123,7 +121,7 @@ def delete_upload(rel_path):
 
 
 def is_uploaded_path(value):
-    """True si el string es un path de upload (no emoji/URL legacy)."""
+    """True si es un path de upload, no un emoji/URL legacy."""
     if not value or not isinstance(value, str):
         return False
     if '/' not in value:

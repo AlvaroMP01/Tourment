@@ -41,7 +41,7 @@ const Teams = () => {
     [teams]
   );
 
-  // El backend ya viene ordenado. Asignamos rank visual y filtramos en cliente.
+  // Backend ya viene ordenado; aquí solo asignamos rank visual y filtramos en cliente.
   const ranked = useMemo(
     () => teams.map((t, idx) => ({ ...t, rank: idx + 1 })),
     [teams]
@@ -67,7 +67,7 @@ const Teams = () => {
   const totalMembers = teams.reduce((acc, t) => acc + (t.member_count ?? 0), 0);
   const totalMatches = teams.reduce((acc, t) => acc + (t.matches_played ?? 0), 0);
 
-  // Podio solo si el sort es wins (es el "ranking" verdadero).
+  // Podio solo cuando sort=wins (el ranking verdadero).
   const showPodium = sortBy === 'wins' && filtered.length > 0;
   const podium = showPodium ? filtered.filter(t => t.rank <= 3 && (t.wins ?? 0) > 0) : [];
   const podiumIds = new Set(podium.map(t => t.id));
@@ -155,7 +155,6 @@ const Teams = () => {
           </div>
         </div>
 
-        {/* Podio top-3 (solo cuando sort=wins y hay equipos con victorias) */}
         {podium.length > 0 && (
           <>
             <h2 className="text-2xl font-tungsten text-white tracking-wider mb-4">PODIO</h2>

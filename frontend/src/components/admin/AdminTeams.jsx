@@ -52,7 +52,7 @@ const AdminTeams = () => {
       </h2>
 
       <div className="bg-valorant-dark/50 border-l-4 border-valorant-red p-4 mb-6 text-sm text-valorant-light">
-        Los equipos los <strong>crea su fundador</strong> (coach o player_coach) — desde acá solo podés
+        Los equipos los <strong>crea su fundador</strong> (coach o player_coach). Desde aquí solo puedes
         verlos y disolver los problemáticos. Las ediciones de equipo (nombre, tag, logo, región) las hace
         el founder en su propio panel.
       </div>

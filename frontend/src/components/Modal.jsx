@@ -13,15 +13,12 @@ const Modal = ({ isOpen, onClose, title, children, size = 'md' }) => {
 
   return createPortal(
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-      {/* Overlay */}
       <div
         className="absolute inset-0 bg-black/70 backdrop-blur-sm"
         onClick={onClose}
       ></div>
 
-      {/* Modal Content */}
       <div className={`relative w-full ${sizeClass} bg-valorant-dark border-2 border-valorant-red clip-corner-sm shadow-2xl z-10`}>
-        {/* Header */}
         <div className="flex justify-between items-center p-6 border-b border-valorant-dark-tertiary">
           <h2 className="text-3xl font-tungsten text-white tracking-wider">
             {title}
@@ -36,7 +33,6 @@ const Modal = ({ isOpen, onClose, title, children, size = 'md' }) => {
           </button>
         </div>
 
-        {/* Body */}
         <div className="p-6 max-h-[70vh] overflow-y-auto custom-scrollbar">
           {children}
         </div>

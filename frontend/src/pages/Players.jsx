@@ -5,8 +5,8 @@ import TeamLogo from '../components/TeamLogo';
 
 const ROLE_FILTERS = ['all', 'Duelist', 'Controller', 'Initiator', 'Sentinel'];
 
-// Metric metadata: cómo se llama, cómo se formatea y cómo se titula el ranking.
-// El backend ya soporta sort_by para todas estas; el frontend solo elige.
+// Cada métrica define etiqueta, formateador y getter desde stats.
+// El backend ya soporta sort_by para todas estas.
 const METRICS = {
   kd:       { label: 'K/D',        title: 'K/D',        format: (v) => v.toFixed(2),     getter: (s) => s.kd },
   adr:      { label: 'ADR',        title: 'ADR',        format: (v) => v.toFixed(1),     getter: (s) => s.adr },
@@ -46,7 +46,7 @@ const Players = () => {
     return () => { cancelled = true; };
   }, [sortBy, minMatches]);
 
-  // Backend ya viene ordenado por la métrica activa. Asignamos rank visual.
+  // Backend ya viene ordenado por la métrica activa; aquí solo asignamos rank visual.
   const ranked = useMemo(
     () => players.map((p, idx) => ({ ...p, rank: idx + 1 })),
     [players]
@@ -93,7 +93,6 @@ const Players = () => {
           <div className="bg-red-500/20 border border-valorant-red p-4 mb-6 text-center text-red-400">{error}</div>
         )}
 
-        {/* Toolbar */}
         <div className="card-valorant p-4 mb-8 grid grid-cols-1 md:grid-cols-12 gap-3 items-center">
           <div className="md:col-span-4">
             <label className="block text-xs text-valorant-light uppercase mb-1">Ordenar por</label>
@@ -133,7 +132,6 @@ const Players = () => {
           </div>
         </div>
 
-        {/* Filtro de rol */}
         <div className="mb-8 flex gap-2 flex-wrap">
           {ROLE_FILTERS.map((role) => (
             <button
@@ -150,7 +148,6 @@ const Players = () => {
           ))}
         </div>
 
-        {/* Podio top-3 */}
         {podium.length > 0 && (
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
             {podium.map((p) => {
@@ -195,7 +192,6 @@ const Players = () => {
           </div>
         )}
 
-        {/* Tabla del resto */}
         <div className="card-valorant overflow-hidden">
           <div className="bg-valorant-dark-tertiary p-4 flex justify-between items-center">
             <h2 className="text-2xl font-tungsten text-white tracking-wider">TABLA COMPLETA</h2>

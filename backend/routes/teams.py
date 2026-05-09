@@ -7,11 +7,9 @@ from uploads_helper import process_and_save, delete_upload, is_uploaded_path
 
 teams_bp = Blueprint('teams', __name__)
 
-# Plazas máximas por equipo (miembros con occupies_slot=True)
 MAX_TEAM_SLOTS = 7
 
-# Campos editables por PUT /teams/<id>. logo se gestiona por su endpoint propio
-# (POST/DELETE /teams/<id>/logo) para evitar URLs externas arbitrarias.
+# logo se gestiona por endpoint propio para evitar URLs externas arbitrarias.
 TEAM_EDITABLE_FIELDS = ('name', 'tag', 'region')
 
 
@@ -28,7 +26,6 @@ def _team_founder_user_id(team_id):
 
 
 def _can_manage_team(user, team_id):
-    """Admin global o founder del equipo."""
     return user.role == 'admin' or _team_founder_user_id(team_id) == user.id
 
 
@@ -112,36 +109,30 @@ def get_teams():
 @token_required
 def create_team(current_user):
     data = request.get_json()
-    
-    # 1. Validar que el usuario tiene permiso para crear equipos
+
     if current_user.role not in ['coach', 'player_coach']:
         return jsonify({"error": "Solo los Coaches o Player/Coaches pueden crear equipos"}), 403
 
-    # 2. Validar que no pertenezca ya a otro equipo
     if TeamMember.query.filter_by(user_id=current_user.id).first():
         return jsonify({"error": "Ya perteneces a un equipo. Solo puedes tener un equipo."}), 400
 
     if not data or not data.get('name') or not data.get('tag'):
         return jsonify({"error": "Nombre y Tag son obligatorios"}), 400
-    
+
     try:
-        # 3. Crear el equipo. El logo se sube después vía POST /teams/<id>/logo
-        # para evitar URLs externas arbitrarias.
         new_team = Team(
             name=data['name'],
             tag=data['tag'],
             region=data.get('region')
         )
         db.session.add(new_team)
-        db.session.flush() 
+        db.session.flush()
 
-        # 4. Determinar role y si ocupa plaza según su role
-        # Si es COACH, es el manager y NO ocupa plaza.
-        # Si es PLAYER_COACH, es el manager (o player_coach) y SÍ ocupa plaza.
+        # Coach -> manager sin plaza. Player_coach -> player_coach con plaza.
         if current_user.role == 'coach':
             role = 'manager'
             occupies = False
-        else: # player_coach
+        else:
             role = 'player_coach'
             occupies = True
 
@@ -152,7 +143,7 @@ def create_team(current_user):
             occupies_slot=occupies
         )
         db.session.add(leader_member)
-        
+
         db.session.commit()
         return jsonify({"mensaje": "Equipo creado con éxito", "team_id": new_team.id}), 201
     except Exception as e:
@@ -164,7 +155,7 @@ def get_team_detail(team_id):
     team = Team.query.get_or_404(team_id)
     founder_id = _team_founder_user_id(team_id)
 
-    # Ordeno por joined_at ascendente para que el founder quede primero en la UI
+    # Founder primero en la UI (orden por joined_at).
     sorted_members = sorted(team.members, key=lambda m: (m.joined_at, m.id))
     members = [{
         "user_id": m.user_id,
@@ -210,21 +201,18 @@ def get_my_teams(current_user):
 @token_required
 def request_to_join(current_user, team_id):
     team = Team.query.get_or_404(team_id)
-    
-    # 1. Solo los jugadores pueden solicitar unirse
+
     if current_user.role != 'player':
         return jsonify({"error": "Solo los Jugadores pueden solicitar unirse a equipos"}), 403
 
-    # 2. Verificar si ya es miembro o ya envió solicitud
     existing_member = TeamMember.query.filter_by(team_id=team_id, user_id=current_user.id).first()
     if existing_member:
         return jsonify({"error": "Ya eres miembro de este equipo"}), 400
-        
+
     existing_request = JoinRequest.query.filter_by(team_id=team_id, user_id=current_user.id).first()
     if existing_request:
         return jsonify({"error": "Ya hay una solicitud pendiente"}), 400
 
-    # 3. Verificar si el usuario ya pertenece a OTRO equipo (regla de un solo equipo)
     if TeamMember.query.filter_by(user_id=current_user.id).first():
         return jsonify({"error": "Ya perteneces a un equipo. Solo puedes pertenecer a uno."}), 400
 
@@ -243,10 +231,6 @@ def request_to_join(current_user, team_id):
         current_app.logger.exception("Error en request_to_join")
         return jsonify({"error": "No se pudo enviar la solicitud"}), 500
 
-
-# ----------------------------------------------------------------------
-# Edición / borrado de equipo (admin o founder)
-# ----------------------------------------------------------------------
 
 @teams_bp.route('/<int:team_id>', methods=['PUT'])
 @token_required
@@ -284,7 +268,7 @@ def delete_team(current_user, team_id):
     if not _can_manage_team(current_user, team_id):
         return jsonify({"error": "Solo el fundador del equipo o un admin puede borrarlo"}), 403
 
-    # Capturo el logo antes del delete: el archivo físico no cae por CASCADE.
+    # Guarda el logo antes del delete: el archivo físico no cae por CASCADE.
     old_logo = team.logo
 
     try:
@@ -299,10 +283,6 @@ def delete_team(current_user, team_id):
         delete_upload(old_logo)
     return jsonify({"mensaje": "Equipo borrado"}), 200
 
-
-# ----------------------------------------------------------------------
-# Gestión de Join Requests (admin o founder)
-# ----------------------------------------------------------------------
 
 @teams_bp.route('/<int:team_id>/join-requests', methods=['GET'])
 @token_required
@@ -340,13 +320,13 @@ def accept_join_request(current_user, team_id, request_id):
     if join_req.status != 'pending':
         return jsonify({"error": f"La solicitud ya fue procesada (status={join_req.status})"}), 409
 
-    # El solicitante puede haberse unido a otro equipo entre la solicitud y la aceptación
+    # Race: el solicitante pudo unirse a otro equipo entre la solicitud y la aceptación.
     if TeamMember.query.filter_by(user_id=join_req.user_id).first():
         join_req.status = 'rejected'
         db.session.commit()
         return jsonify({"error": "El usuario ya pertenece a un equipo. Solicitud rechazada automáticamente."}), 409
 
-    # Validar el límite de plazas al ACEPTAR (no al solicitar)
+    # Plazas se validan al ACEPTAR, no al solicitar.
     if _count_occupied_slots(team_id) >= MAX_TEAM_SLOTS:
         return jsonify({"error": f"El equipo ya alcanzó el límite de {MAX_TEAM_SLOTS} plazas"}), 409
 
@@ -391,10 +371,6 @@ def reject_join_request(current_user, team_id, request_id):
         return jsonify({"error": "No se pudo rechazar la solicitud"}), 500
 
 
-# ----------------------------------------------------------------------
-# Expulsar miembro / abandonar equipo
-# ----------------------------------------------------------------------
-
 @teams_bp.route('/<int:team_id>/members/<int:user_id>', methods=['DELETE'])
 @token_required
 def remove_team_member(current_user, team_id, user_id):
@@ -414,7 +390,7 @@ def remove_team_member(current_user, team_id, user_id):
     # No se puede expulsar al founder. Si quiere irse, debe borrar el equipo.
     if _team_founder_user_id(team_id) == user_id:
         return jsonify({
-            "error": "No se puede expulsar al fundador del equipo. Para disolver el equipo usá DELETE /teams/<id>."
+            "error": "No se puede expulsar al fundador del equipo. Para disolver el equipo usa DELETE /teams/<id>."
         }), 409
 
     try:
@@ -426,10 +402,6 @@ def remove_team_member(current_user, team_id, user_id):
         current_app.logger.exception("Error remove_team_member team=%s user=%s", team_id, user_id)
         return jsonify({"error": "No se pudo remover el miembro"}), 500
 
-
-# ----------------------------------------------------------------------
-# Logo: upload / delete (admin o founder)
-# ----------------------------------------------------------------------
 
 @teams_bp.route('/<int:team_id>/logo', methods=['POST'])
 @token_required

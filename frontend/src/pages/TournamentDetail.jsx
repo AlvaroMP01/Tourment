@@ -65,7 +65,7 @@ const BracketEmptyState = ({ isManager, acceptedCount, allowedSizes, onGenerate,
           </button>
         ) : (
           <p className="text-xs text-valorant-light italic">
-            Esperá a tener una cantidad válida para generar el bracket.
+            Espera a tener una cantidad válida para generar el bracket.
           </p>
         )
       )}
@@ -132,7 +132,7 @@ const TournamentDetail = () => {
   const [tournament, setTournament] = useState(null);
   const [teamsById, setTeamsById] = useState({});
   const [registrations, setRegistrations] = useState([]);
-  const [myFounderTeams, setMyFounderTeams] = useState([]); // teams donde el user es founder
+  const [myFounderTeams, setMyFounderTeams] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [actionMsg, setActionMsg] = useState('');
@@ -156,8 +156,7 @@ const TournamentDetail = () => {
       setTeamsById(map);
       setRegistrations(regs || []);
 
-      // Founder detection: para cada team del usuario, traemos detalle y vemos
-      // si es founder. Es N+1 pero suele ser N=1.
+      // N+1 aceptable: un user solo puede ser founder de 1 team.
       if (isAuthenticated && user) {
         try {
           const myTeams = await routesAPI.getMyTeams();
@@ -186,8 +185,7 @@ const TournamentDetail = () => {
     setTimeout(() => setActionMsg(''), 3000);
   };
 
-  // Hidrato cada match con team1/team2 objects + score como números.
-  // En matches del bracket, team1_id/team2_id pueden ser null (slot vacío esperando avance).
+  // En matches de bracket team1_id/team2_id pueden ser null hasta que avance el ganador.
   const matches = useMemo(() => {
     if (!tournament?.matches) return [];
     return tournament.matches.map((m) => {
@@ -214,7 +212,6 @@ const TournamentDetail = () => {
     });
   }, [tournament, teamsById]);
 
-  // Bracket: matches con bracketRound != null, agrupados por ronda y ordenados por position.
   const bracketRounds = useMemo(() => {
     const withBracket = matches.filter((m) => m.bracketRound != null);
     if (withBracket.length === 0) return [];
@@ -237,8 +234,7 @@ const TournamentDetail = () => {
     [bracketRounds]
   );
 
-  // Matches "jugables": ambos equipos asignados. En el bracket los slots vacíos
-  // se omiten de las listas generales — solo aparecen en el árbol del bracket.
+  // Slots vacíos del bracket solo aparecen en el árbol, no en listas generales.
   const playableMatches = useMemo(
     () => matches.filter((m) => m.team1 && m.team2),
     [matches]
@@ -247,8 +243,6 @@ const TournamentDetail = () => {
   const acceptedRegs = useMemo(() => registrations.filter(r => r.status === 'accepted'), [registrations]);
   const pendingRegs = useMemo(() => registrations.filter(r => r.status === 'pending'), [registrations]);
 
-  // ¿El user tiene un equipo (donde es founder) ya registrado en este torneo?
-  // Como un user solo puede ser founder de UN team (regla actual), tomo el primero.
   const myFounderTeam = myFounderTeams[0] || null;
   const myRegistration = useMemo(() => {
     if (!myFounderTeam) return null;
@@ -423,7 +417,6 @@ const TournamentDetail = () => {
           </div>
         )}
 
-        {/* Banner de inscripción del founder (visible en cualquier tab) */}
         {isAuthenticated && myFounderTeam && (
           <div className="card-valorant p-5 mb-8 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
             <div className="flex items-center gap-4">
@@ -466,7 +459,6 @@ const TournamentDetail = () => {
           </div>
         )}
 
-        {/* Panel admin de pendientes (visible para manager con cualquier tab) */}
         {isManager && pendingRegs.length > 0 && (
           <div className="card-valorant p-5 mb-8 border-l-4 border-valorant-gold">
             <h3 className="text-xl font-tungsten text-valorant-gold tracking-wider mb-4">

@@ -78,7 +78,7 @@ const EventCalendar = () => {
     }
   }, [selectedStatus, selectedTournamentId, tournaments]);
 
-  // Cuando elegís un torneo específico, saltar al mes de su start_date.
+  // Cuando eliges un torneo específico, saltar al mes de su start_date.
   useEffect(() => {
     if (selectedTournamentId !== 'all') {
       const selected = tournaments.find((t) => String(t.id) === selectedTournamentId);

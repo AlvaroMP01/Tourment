@@ -41,7 +41,7 @@ const request = async (
   if (params) url += `?${new URLSearchParams(params)}`;
 
   // FormData maneja su propio Content-Type (incluido el boundary). Si lo
-  // seteamos a mano, el browser no agrega el boundary y el server falla.
+  // establecemos a mano, el browser no añade el boundary y el server falla.
   const isFormData = typeof FormData !== "undefined" && body instanceof FormData;
   const useJsonContentType = isJson && !isFormData;
 
@@ -66,8 +66,6 @@ const put = (endpoint, body, isJson = true, options) =>
 const del = (endpoint, options) =>
   request(endpoint, { method: "DELETE", ...options });
 
-// Helper específico para uploads multipart. Acepta un File y lo manda como
-// campo 'file' en un FormData.
 const upload = (endpoint, file, { method = "POST", token } = {}) => {
   const fd = new FormData();
   fd.append("file", file);

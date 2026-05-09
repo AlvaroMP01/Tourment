@@ -1,8 +1,6 @@
 from datetime import datetime
 from extensions import db
 
-from datetime import datetime
-from extensions import db
 
 class User(db.Model):
     __tablename__ = 'users'
@@ -23,7 +21,6 @@ class User(db.Model):
     avatar = db.Column(db.String(255))
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
-    # Relationships
     stats = db.relationship('UserStat', backref='user', uselist=False, cascade="all, delete-orphan")
     team_memberships = db.relationship('TeamMember', backref='user', cascade="all, delete-orphan")
     achievements = db.relationship('UserAchievement', backref='user', cascade="all, delete-orphan")
@@ -50,7 +47,6 @@ class Team(db.Model):
     region = db.Column(db.String(50))
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
-    # Relationships
     members = db.relationship('TeamMember', backref='team', cascade="all, delete-orphan")
     matches_as_team1 = db.relationship('Match', foreign_keys='Match.team1_id', backref='team1', cascade="all, delete-orphan")
     matches_as_team2 = db.relationship('Match', foreign_keys='Match.team2_id', backref='team2', cascade="all, delete-orphan")
@@ -60,22 +56,17 @@ class TeamMember(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     team_id = db.Column(db.Integer, db.ForeignKey('teams.id', ondelete='CASCADE'), nullable=False)
     user_id = db.Column(db.Integer, db.ForeignKey('users.id', ondelete='CASCADE'), nullable=False)
+
     
-    # Roles dentro del equipo
-    # manager: el creador
-    # player: jugador
-    # coach: entrenador
-    # player_coach: ambos
     team_role = db.Column(db.Enum('manager', 'player', 'coach', 'player_coach'), default='player')
-    
+
     ingame_role = db.Column(db.String(50))
     favorite_agent = db.Column(db.String(50))
     joined_at = db.Column(db.DateTime, default=datetime.utcnow)
-    
-    # Optimización para conteo de plazas ocupadas
+
+    # Denormalizado para contar plazas ocupadas sin recalcular el rol cada vez.
     occupies_slot = db.Column(db.Boolean, default=True)
 
-    # Unique constraint: a user can only be in a team once
     __table_args__ = (db.UniqueConstraint('team_id', 'user_id', name='_team_user_uc'),)
 
 class JoinRequest(db.Model):
@@ -106,7 +97,6 @@ class Tournament(db.Model):
     bracket_size = db.Column(db.Integer)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
-    # Relationships
     matches = db.relationship('Match', backref='tournament', cascade="all, delete-orphan")
     registrations = db.relationship('TournamentRegistration', backref='tournament', cascade="all, delete-orphan")
 
@@ -114,7 +104,7 @@ class Tournament(db.Model):
 class TournamentRegistration(db.Model):
     """Inscripción de un equipo a un torneo. Dos caminos:
     - Founder solicita -> status='pending', requested_by_user_id = founder.
-    - Admin agrega un team a un match sin registrarlo antes -> auto-create
+    - Admin añade un team a un match sin registrarlo antes -> auto-create
       con status='accepted' y requested_by_user_id = admin (atajo Opción 2).
     Un equipo solo puede tener una inscripción por torneo (UNIQUE)."""
     __tablename__ = 'tournament_registrations'
@@ -136,7 +126,7 @@ class Match(db.Model):
     tournament_id = db.Column(db.Integer, db.ForeignKey('tournaments.id', ondelete='SET NULL'))
     # team1/team2 son NULLABLE para soportar slots vacíos del bracket que se llenan
     # cuando avanza el ganador del partido anterior. En matches no-bracket (amistosos
-    # o creados manualmente) ambos deben venir seteados — eso lo valida el endpoint.
+    # o creados manualmente) ambos deben venir definidos — eso lo valida el endpoint.
     team1_id = db.Column(db.Integer, db.ForeignKey('teams.id', ondelete='CASCADE'))
     team2_id = db.Column(db.Integer, db.ForeignKey('teams.id', ondelete='CASCADE'))
     score_team1 = db.Column(db.Integer, default=0)
@@ -146,7 +136,7 @@ class Match(db.Model):
     status = db.Column(db.Enum('scheduled', 'live', 'finished'), default='scheduled')
     match_date = db.Column(db.DateTime)
 
-    # Campos de bracket. NULL en matches sueltos. Seteados cuando el match
+    # Campos de bracket. NULL en matches sueltos. Definidos cuando el match
     # forma parte de un bracket de eliminación directa.
     # bracket_round: 1 = primera ronda. Crece hasta la final (round = log2(size)).
     # bracket_position: índice del slot dentro de la ronda (1..N). Identifica
@@ -163,7 +153,7 @@ class Match(db.Model):
 
 class MatchPlayerStat(db.Model):
     """Stats de un jugador en una partida concreta. Source of truth.
-    UserStat es el agregado denormalizado que se actualiza desde acá."""
+    UserStat es el agregado denormalizado que se actualiza desde aquí."""
     __tablename__ = 'match_player_stats'
     id = db.Column(db.Integer, primary_key=True)
     match_id = db.Column(db.Integer, db.ForeignKey('matches.id', ondelete='CASCADE'), nullable=False)

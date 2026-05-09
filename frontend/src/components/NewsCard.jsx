@@ -24,7 +24,6 @@ const NewsCard = ({ news, index }) => {
     >
       <article className="card-valorant overflow-hidden group transition-transform duration-300 h-full hover:scale-[1.02]">
         <div className="p-6">
-          {/* índice + categoría + fecha */}
           <div className="flex items-center gap-3 text-[10px] tracking-[0.18em] font-bold uppercase mb-3">
             <span className="text-valorant-light/50 tabular-nums">
               {idx}
@@ -41,7 +40,6 @@ const NewsCard = ({ news, index }) => {
             )}
           </div>
 
-          {/* título grande */}
           <h3
             className={`font-tungsten text-white tracking-wider uppercase leading-[0.95] ${
               index === 0 ? 'text-4xl' : 'text-3xl'
@@ -50,7 +48,6 @@ const NewsCard = ({ news, index }) => {
             {news?.title || 'Sin título'}
           </h3>
 
-          {/* descripción */}
           <p className="text-valorant-light/70 text-sm leading-relaxed mt-3 line-clamp-4">
             {news?.description || ''}
           </p>

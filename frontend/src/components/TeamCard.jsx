@@ -25,7 +25,6 @@ const TeamCard = ({ team, rank, highlightMetric }) => {
           podium ? `border-t-4 ${podium.border} ${podium.glow}` : ''
         }`}
       >
-        {/* Rank badge (solo si rank fue pasado) */}
         {rank && (
           <div className="flex items-center justify-between mb-3">
             <span className={`text-4xl font-tungsten ${podium ? podium.text : 'text-white'}`}>

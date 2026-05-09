@@ -16,16 +16,13 @@ const formatDate = (raw) => {
 };
 
 const TournamentCard = ({ tournament }) => {
-  // El adapter expone startDate/endDate; el endpoint crudo usa start_date/end_date.
-  // Aceptamos ambas para que el componente sirva en cualquier caller.
+  // Acepta tanto el shape del adapter (camelCase) como el del endpoint crudo (snake_case).
   const startDate = tournament.startDate || tournament.start_date;
   const endDate = tournament.endDate || tournament.end_date;
   const status = tournament.status;
   const badge = STATUS_BADGE[status] || null;
   const { image, description, name } = tournament;
 
-  // Prize: el adapter expone prizeAmount/prizeCurrency + prize formateado;
-  // el endpoint crudo expone prize_amount + prize_currency. Aceptamos ambas.
   const prizeAmount = tournament.prizeAmount ?? tournament.prize_amount ?? null;
   const prizeCurrency = tournament.prizeCurrency || tournament.prize_currency || null;
   const hasPrize = prizeAmount != null && Number(prizeAmount) > 0;
@@ -56,7 +53,6 @@ const TournamentCard = ({ tournament }) => {
           )}
         </div>
 
-        {/* Tournament Info */}
         <div className="p-6">
           <h3 className="text-2xl font-tungsten text-white mb-2 tracking-wider">
             {tournament.name}

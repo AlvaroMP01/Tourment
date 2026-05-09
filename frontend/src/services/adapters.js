@@ -7,7 +7,6 @@ const PRIZE_NUMBER_FORMAT = new Intl.NumberFormat('es-ES', { maximumFractionDigi
 const CURRENCY_SYMBOL = { EUR: '€' };
 
 export const formatPrize = (amount, currency) => {
-  // null/undefined/0 → torneo sin premio
   if (amount == null || amount === '' || Number(amount) === 0) return 'Por determinar';
   const num = typeof amount === 'string' ? parseFloat(amount) : amount;
   if (Number.isNaN(num)) return 'Por determinar';

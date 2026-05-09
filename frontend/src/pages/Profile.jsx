@@ -89,7 +89,6 @@ const Profile = () => {
         <h2 className="text-4xl font-tungsten mb-8 tracking-wider text-center">MI PERFIL</h2>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-          {/* Sidebar: Avatar y Nombre */}
           <div className="md:col-span-1">
             <div className="card-valorant p-6 text-center">
               <div className="flex justify-center mb-4">
@@ -119,7 +118,6 @@ const Profile = () => {
             </button>
           </div>
 
-          {/* Main: Formulario de Edición */}
           <div className="md:col-span-2">
             <div className="card-valorant p-8">
               <h3 className="text-2xl font-tungsten mb-6">Editar Información</h3>

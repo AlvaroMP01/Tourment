@@ -1,6 +1,6 @@
 -- Migración: soporte de brackets de eliminación directa.
 -- Aplicar a una DB existente (que ya fue creada con schema.sql original).
--- Idempotente NO — correr UNA sola vez. Si ya tenés errores de "duplicate column",
+-- Idempotente NO — correr UNA sola vez. Si ya tienes errores de "duplicate column",
 -- significa que ya se aplicó.
 --
 -- Cómo correr:

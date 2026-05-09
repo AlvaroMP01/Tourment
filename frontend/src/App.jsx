@@ -27,7 +27,6 @@ function App() {
         <div className="min-h-screen bg-valorant-dark">
           <Navbar />
           <Routes>
-            {/* Rutas Públicas */}
             <Route path="/" element={<Home />} />
             <Route path="/tournaments" element={<Tournaments />} />
             <Route path="/tournaments/:id" element={<TournamentDetail />} />
@@ -45,7 +44,6 @@ function App() {
               </PublicOnlyRoute>
             } />
 
-            {/* Rutas Protegidas (Cualquier usuario logueado) */}
             <Route path="/teams/:id" element={
               <ProtectedRoute>
                 <TeamDetail />
@@ -64,7 +62,7 @@ function App() {
               </ProtectedRoute>
             } />
 
-            {/* Panel de gestión (admin Y tournament_manager — la UI filtra qué secciones se muestran) */}
+            {/* admin y tournament_manager: la UI filtra qué secciones ve cada uno. */}
             <Route path="/admin" element={
               <ProtectedRoute>
                 <RoleRoute allowedRoles={['admin', 'tournament_manager']}>
@@ -73,17 +71,15 @@ function App() {
               </ProtectedRoute>
             } />
 
-            {/* Fallback */}
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
-          
-          {/* Footer */}
+
           <footer className="bg-valorant-dark-secondary border-t-2 border-valorant-dark-tertiary mt-20">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
               <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
                 <div>
                   <h3 className="text-2xl font-tungsten text-white mb-4 tracking-wider">
-                    VALORANT TOURNAMENT
+                    TOURMENT
                   </h3>
                   <p className="text-valorant-light text-sm">
                     La plataforma líder de torneos de VALORANT en España.
@@ -139,7 +135,7 @@ function App() {
               </div>
               <div className="divider-glow my-8"></div>
               <div className="text-center text-valorant-light text-sm">
-                <p>© 2024 Valorant Tournament Platform. Todos los derechos reservados.</p>
+                <p>© 2026 Tourment. Todos los derechos reservados.</p>
                 <p className="mt-2 text-xs opacity-70">
                   VALORANT es una marca registrada de Riot Games, Inc.
                 </p>

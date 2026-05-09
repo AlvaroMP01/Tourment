@@ -55,9 +55,7 @@ const AdminTournaments = () => {
 
   const handleOpenModal = (item = null) => {
     if (item) {
-      // Backend devuelve null para campos opcionales vacíos; los inputs necesitan strings.
-      // prize_amount viene como número o null; el input numérico necesita string vacío para "limpio".
-      // image se gestiona por su propio endpoint, no entra al payload del PUT.
+      // Inputs necesitan strings ('' para vacío); image se sube por su propio endpoint.
       setEditing({
         ...item,
         prize_amount: item.prize_amount != null ? String(item.prize_amount) : '',
@@ -86,11 +84,10 @@ const AdminTournaments = () => {
     setError('');
     setSubmitting(true);
 
-    // prize_amount: string vacío → null (sin premio). Si tiene valor → número.
+    // prize_amount: string vacío → null (sin premio).
     const rawAmount = editing.prize_amount;
     const prizeAmount = rawAmount === '' || rawAmount == null ? null : Number(rawAmount);
 
-    // image NO va en el payload: se sube por POST /tournaments/<id>/image.
     const payload = {
       name: editing.name,
       start_date: editing.start_date,

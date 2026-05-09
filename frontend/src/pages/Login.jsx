@@ -28,8 +28,12 @@ const Login = () => {
   return (
     <div className="min-h-screen bg-valorant-dark flex flex-col justify-center py-12 sm:px-6 lg:px-8">
       <div className="sm:mx-auto sm:w-full sm:max-w-md">
-        <div className="w-16 h-16 bg-valorant-red clip-corner flex items-center justify-center mx-auto mb-4">
-          <span className="text-3xl font-bold text-white">V</span>
+        <div className="w-20 h-20 flex items-center justify-center mx-auto mb-4">
+          <img
+            src="/favicon.png"
+            alt="Tourment logo"
+            className="w-full h-full object-contain"
+          />
         </div>
         <h2 className="mt-6 text-center text-3xl md:text-5xl font-tungsten text-white tracking-wider">
           INICIAR SESIÓN

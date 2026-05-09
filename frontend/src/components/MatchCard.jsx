@@ -32,7 +32,6 @@ const MatchCard = ({ match }) => {
       </div>
 
       <div className="space-y-4">
-        {/* Team 1 */}
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-3 flex-1">
             <TeamLogo path={team1.logo} size="sm" alt={`Logo ${safeName(team1)}`} />
@@ -53,7 +52,6 @@ const MatchCard = ({ match }) => {
           </div>
         </div>
 
-        {/* Team 2 */}
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-3 flex-1">
             <TeamLogo path={team2.logo} size="sm" alt={`Logo ${safeName(team2)}`} />

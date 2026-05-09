@@ -1,5 +1,5 @@
 from flask import Blueprint, request, jsonify, current_app
-from extensions import db
+from extensions import db, limiter
 from models import User, UserStat
 from werkzeug.security import generate_password_hash, check_password_hash
 from utils import SELF_REGISTRABLE_ROLES
@@ -63,7 +63,11 @@ def register():
 
 
 @auth_bp.route('/login', methods=['POST'])
+@limiter.limit("5 per minute; 20 per hour")
 def login():
+    # Rate-limit por IP: 5 intentos por minuto, 20 por hora. Frena brute-force
+    # de contraseñas. ProxyFix en app.py garantiza que la IP es la real del
+    # cliente (no la del reverse proxy de Railway).
     data = request.get_json() or {}
 
     nickname = (data.get('nickname') or '').strip()
