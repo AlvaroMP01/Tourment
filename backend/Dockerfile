@@ -15,9 +15,9 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY . .
 
-# Usuario no-root para minimizar superficie de ataque si el proceso es comprometido.
-RUN useradd --create-home appuser && chown -R appuser:appuser /app
-USER appuser
+# Se ejecuta como root para poder escribir en el Volume montado por Railway
+# en /app/uploads (mount con propiedad root que tapa cualquier chown previo).
+# Aceptable en Railway: el container vive en su propio namespace aislado.
 
 EXPOSE 5000
 
