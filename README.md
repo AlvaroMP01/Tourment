@@ -180,9 +180,9 @@ La base de datos cuenta con **diez tablas** que cubren usuarios, equipos, torneo
 
 ### 6.1. Diagrama entidad-relación
 
-> Sustituye este marcador por el diagrama ER exportado desde tu herramienta de modelado.
-
 ![Diagrama entidad-relación](docs/db/diagrama-er.png)
+
+![Diagrama entidad-relación](docs/db/diagrama-er2.png)
 
 ### 6.2. Esquema lógico
 
