@@ -47,11 +47,12 @@ if not SECRET_KEY or len(SECRET_KEY) < 32:
     )
 app.config['SECRET_KEY'] = SECRET_KEY
 
-user = os.getenv('MYSQL_USER', 'torneos_user')
-password = os.getenv('MYSQL_PASSWORD', 'torneos_pass')
-host = os.getenv('MYSQL_HOST', 'db')
-database = os.getenv('MYSQL_DATABASE', 'torneos_db')
-port = os.getenv('MYSQL_PORT', '3306')
+# Acepta variables con guion bajo (docker-compose local) o sin (Railway plugin).
+user = os.getenv('MYSQL_USER') or os.getenv('MYSQLUSER', 'torneos_user')
+password = os.getenv('MYSQL_PASSWORD') or os.getenv('MYSQLPASSWORD', 'torneos_pass')
+host = os.getenv('MYSQL_HOST') or os.getenv('MYSQLHOST', 'db')
+database = os.getenv('MYSQL_DATABASE') or os.getenv('MYSQLDATABASE', 'torneos_db')
+port = os.getenv('MYSQL_PORT') or os.getenv('MYSQLPORT', '3306')
 
 app.config['SQLALCHEMY_DATABASE_URI'] = f'mysql+pymysql://{user}:{password}@{host}:{port}/{database}'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
