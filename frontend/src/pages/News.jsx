@@ -6,7 +6,6 @@ import { routesAPI } from '../services/routesAPI';
 const News = () => {
   const [vlrNews, setVlrNews] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [filter, setFilter] = useState('all');
   const [error, setError] = useState('');
 
   useEffect(() => {
@@ -26,41 +25,18 @@ const News = () => {
     fetchNews();
   }, []);
 
-  const filteredNews = filter === 'all' 
-    ? vlrNews
-    : vlrNews.filter(n => n.category === filter);
-
-  const categories = ['all', 'Noticias', 'Resultados', 'Actualizaciones'];
-
   return (
     <div className="min-h-screen bg-valorant-dark py-12">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Header */}
         <div className="mb-12">
-          <h1 className="text-6xl font-tungsten text-white tracking-wider mb-4">
+          <h1 className="text-4xl md:text-6xl font-tungsten text-white tracking-wider mb-4">
             NOTICIAS
           </h1>
           <div className="h-1 w-32 bg-valorant-red mb-4"></div>
           <p className="text-valorant-light text-lg">
             Mantente al día con las últimas noticias del mundo competitivo de VALORANT
           </p>
-        </div>
-
-        {/* Filters */}
-        <div className="mb-8 flex gap-2 flex-wrap">
-          {categories.map((category) => (
-            <button
-              key={category}
-              onClick={() => setFilter(category)}
-              className={`px-6 py-2 font-bold uppercase text-sm clip-corner-sm transition-all ${
-                filter === category
-                  ? 'bg-valorant-red text-white'
-                  : 'bg-valorant-dark-secondary text-valorant-light hover:bg-valorant-dark-tertiary'
-              }`}
-            >
-              {category === 'all' ? 'Todas' : category}
-            </button>
-          ))}
         </div>
 
         {/* News Grid */}
@@ -76,9 +52,9 @@ const News = () => {
               {error}
             </p>
           </div>
-        ) : filteredNews.length > 0 ? (
+        ) : vlrNews.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredNews.map((news, index) => (
+            {vlrNews.map((news, index) => (
               <NewsCard
                 key={news.id || index}
                 index={index}

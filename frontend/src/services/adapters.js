@@ -47,6 +47,7 @@ export const tournamentAdapter = (apiTournament) => {
     prizeCurrency: apiTournament.prize_currency || null,
     prize: formatPrize(apiTournament.prize_amount, apiTournament.prize_currency),
     description: apiTournament.description || null,
+    acceptedTeamsCount: apiTournament.accepted_teams_count ?? null,
   };
 };
 

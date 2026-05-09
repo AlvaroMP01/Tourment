@@ -12,6 +12,17 @@ const ROLE_LABELS = {
   player_coach: 'Jugador / Coach',
 };
 
+const ANDALUCIA_PROVINCES = [
+  'Almería',
+  'Cádiz',
+  'Córdoba',
+  'Granada',
+  'Huelva',
+  'Jaén',
+  'Málaga',
+  'Sevilla',
+];
+
 const emptyTeamForm = {
   name: '',
   tag: '',
@@ -185,7 +196,7 @@ const MyTeams = () => {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center mb-12">
           <div>
-            <h1 className="text-6xl font-tungsten text-white tracking-wider mb-2">MIS EQUIPOS</h1>
+            <h1 className="text-4xl md:text-6xl font-tungsten text-white tracking-wider mb-2">MIS EQUIPOS</h1>
             <div className="h-1 w-32 bg-valorant-red mb-4"></div>
             <p className="text-valorant-light text-lg">Gestiona los equipos a los que perteneces</p>
           </div>
@@ -377,7 +388,7 @@ const MyTeams = () => {
               />
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="block text-xs font-bold uppercase text-valorant-light mb-1">Tag</label>
                 <input
@@ -386,11 +397,16 @@ const MyTeams = () => {
                 />
               </div>
               <div>
-                <label className="block text-xs font-bold uppercase text-valorant-light mb-1">Región</label>
-                <input
-                  type="text" name="region" value={teamForm.region} onChange={handleFormChange}
+                <label className="block text-xs font-bold uppercase text-valorant-light mb-1">Provincia</label>
+                <select
+                  name="region" value={teamForm.region} onChange={handleFormChange}
                   className="w-full bg-valorant-dark-secondary border border-valorant-dark focus:border-valorant-red outline-none p-2 text-white"
-                />
+                >
+                  <option value="">Seleccionar...</option>
+                  {ANDALUCIA_PROVINCES.map((p) => (
+                    <option key={p} value={p}>{p}</option>
+                  ))}
+                </select>
               </div>
             </div>
 

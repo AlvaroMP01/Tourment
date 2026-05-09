@@ -1,5 +1,5 @@
 import os
-from flask import Flask, jsonify, send_from_directory
+from flask import Flask, jsonify, request, send_from_directory
 from flask_cors import CORS
 from sqlalchemy import text
 from extensions import db
@@ -75,9 +75,17 @@ def handle_too_large(e):
         "error": "El archivo supera el tamaño máximo permitido (1MB)."
     }), 413
 
+NEWS_DEFAULT_LIMIT = 20
+NEWS_MAX_LIMIT = 50
+
 @app.route('/api/news')
 def get_news():
-    news = scraper.get_latest_news(limit=6)
+    try:
+        limit = int(request.args.get('limit', NEWS_DEFAULT_LIMIT))
+    except (TypeError, ValueError):
+        limit = NEWS_DEFAULT_LIMIT
+    limit = max(1, min(limit, NEWS_MAX_LIMIT))
+    news = scraper.get_latest_news(limit=limit)
     return jsonify(news)
 
 @app.route('/test-db')

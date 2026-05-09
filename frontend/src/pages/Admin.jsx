@@ -35,7 +35,7 @@ const Admin = () => {
     <div className="min-h-screen bg-valorant-dark py-12">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="mb-12">
-          <h1 className="text-6xl font-tungsten text-white tracking-wider mb-4">
+          <h1 className="text-4xl md:text-6xl font-tungsten text-white tracking-wider mb-4">
             {headerTitle}
           </h1>
           <div className="h-1 w-32 bg-valorant-red mb-4"></div>

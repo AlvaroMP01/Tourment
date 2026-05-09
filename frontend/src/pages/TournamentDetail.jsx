@@ -21,11 +21,12 @@ const REG_STATUS_BADGE = {
 
 const REG_STATUS_LABEL = {
   pending: 'Solicitud pendiente',
-  accepted: 'Inscripto',
+  accepted: 'Inscrito',
   rejected: 'Rechazado',
 };
 
 const TOURNAMENT_MANAGER_ROLES = new Set(['admin', 'tournament_manager']);
+const ALLOWED_BRACKET_SIZES = [4, 8, 16];
 
 const formatDate = (raw) => {
   if (!raw) return '—';
@@ -40,6 +41,88 @@ const parseScore = (raw) => {
     return Number.isNaN(n) ? null : n;
   });
   return [a ?? null, b ?? null];
+};
+
+const BracketEmptyState = ({ isManager, acceptedCount, allowedSizes, onGenerate, disabled }) => {
+  const canGenerate = allowedSizes.includes(acceptedCount);
+  return (
+    <div className="card-valorant p-8 text-center">
+      <div className="text-5xl mb-3">🏆</div>
+      <h3 className="text-2xl font-tungsten text-white mb-2 tracking-wider">SIN BRACKET GENERADO</h3>
+      <p className="text-valorant-light mb-6">
+        El bracket de eliminación directa requiere exactamente{' '}
+        <span className="text-white font-bold">{allowedSizes.join(', ')}</span> equipos inscritos.
+        Actualmente: <span className="text-white font-bold">{acceptedCount}</span>.
+      </p>
+      {isManager && (
+        canGenerate ? (
+          <button
+            onClick={onGenerate}
+            disabled={disabled}
+            className="btn-valorant disabled:opacity-50"
+          >
+            GENERAR BRACKET
+          </button>
+        ) : (
+          <p className="text-xs text-valorant-light italic">
+            Esperá a tener una cantidad válida para generar el bracket.
+          </p>
+        )
+      )}
+    </div>
+  );
+};
+
+const BracketMatchCard = ({ match }) => {
+  const isFinished = match.status === 'finished';
+  const winnerSlot = isFinished
+    ? (match.score1 > match.score2 ? 1 : 2)
+    : null;
+
+  const renderTeam = (team, score, slot) => {
+    const isWinner = winnerSlot === slot;
+    const isPending = !team;
+    return (
+      <div className={`flex justify-between items-center px-3 py-2 ${isWinner ? 'bg-valorant-red/20' : ''}`}>
+        <span className={`text-sm truncate ${isPending ? 'text-valorant-light italic' : isWinner ? 'text-white font-bold' : 'text-white'}`}>
+          {team ? team.name : 'Por definir'}
+        </span>
+        <span className={`text-lg font-tungsten ml-2 ${isWinner ? 'text-valorant-red' : 'text-valorant-light'}`}>
+          {score != null ? score : '-'}
+        </span>
+      </div>
+    );
+  };
+
+  return (
+    <div className="bg-valorant-dark-tertiary border border-valorant-dark min-w-[180px] clip-corner-sm overflow-hidden">
+      {renderTeam(match.team1, match.score1, 1)}
+      <div className="border-t border-valorant-dark"></div>
+      {renderTeam(match.team2, match.score2, 2)}
+    </div>
+  );
+};
+
+const BracketTree = ({ rounds }) => {
+  if (rounds.length === 0) return null;
+  return (
+    <div className="overflow-x-auto pb-4">
+      <div className="flex gap-8 min-w-max">
+        {rounds.map((round) => (
+          <div key={round.round} className="flex flex-col">
+            <h3 className="text-sm font-bold uppercase tracking-wider text-valorant-red mb-4 text-center">
+              {round.name}
+            </h3>
+            <div className="flex-1 flex flex-col justify-around gap-4">
+              {round.matches.map((match) => (
+                <BracketMatchCard key={match.id} match={match} />
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
 };
 
 const TournamentDetail = () => {
@@ -104,33 +187,62 @@ const TournamentDetail = () => {
   };
 
   // Hidrato cada match con team1/team2 objects + score como números.
+  // En matches del bracket, team1_id/team2_id pueden ser null (slot vacío esperando avance).
   const matches = useMemo(() => {
     if (!tournament?.matches) return [];
     return tournament.matches.map((m) => {
       const [s1, s2] = parseScore(m.score);
+      const team1 = m.team1_id != null
+        ? (teamsById[m.team1_id] || { id: m.team1_id, name: `Team #${m.team1_id}` })
+        : null;
+      const team2 = m.team2_id != null
+        ? (teamsById[m.team2_id] || { id: m.team2_id, name: `Team #${m.team2_id}` })
+        : null;
       return {
         id: m.id,
-        team1: teamsById[m.team1_id] || { id: m.team1_id, name: `Team #${m.team1_id}` },
-        team2: teamsById[m.team2_id] || { id: m.team2_id, name: `Team #${m.team2_id}` },
+        team1,
+        team2,
         score1: s1,
         score2: s2,
         map: m.map,
         round: m.round,
         status: m.status,
         date: m.date,
+        bracketRound: m.bracket_round,
+        bracketPosition: m.bracket_position,
       };
     });
   }, [tournament, teamsById]);
 
-  const matchesByRound = useMemo(() => {
-    const groups = new Map();
-    for (const m of matches) {
-      const key = m.round || 'Sin ronda';
-      if (!groups.has(key)) groups.set(key, []);
-      groups.get(key).push(m);
+  // Bracket: matches con bracketRound != null, agrupados por ronda y ordenados por position.
+  const bracketRounds = useMemo(() => {
+    const withBracket = matches.filter((m) => m.bracketRound != null);
+    if (withBracket.length === 0) return [];
+    const grouped = new Map();
+    for (const m of withBracket) {
+      if (!grouped.has(m.bracketRound)) grouped.set(m.bracketRound, []);
+      grouped.get(m.bracketRound).push(m);
     }
-    return Array.from(groups.entries()).map(([name, list]) => ({ name, matches: list }));
+    return Array.from(grouped.entries())
+      .sort(([a], [b]) => a - b)
+      .map(([round, list]) => ({
+        round,
+        name: list[0]?.round || `Ronda ${round}`,
+        matches: list.sort((a, b) => (a.bracketPosition || 0) - (b.bracketPosition || 0)),
+      }));
   }, [matches]);
+
+  const bracketHasFinished = useMemo(
+    () => bracketRounds.some((r) => r.matches.some((m) => m.status === 'finished')),
+    [bracketRounds]
+  );
+
+  // Matches "jugables": ambos equipos asignados. En el bracket los slots vacíos
+  // se omiten de las listas generales — solo aparecen en el árbol del bracket.
+  const playableMatches = useMemo(
+    () => matches.filter((m) => m.team1 && m.team2),
+    [matches]
+  );
 
   const acceptedRegs = useMemo(() => registrations.filter(r => r.status === 'accepted'), [registrations]);
   const pendingRegs = useMemo(() => registrations.filter(r => r.status === 'pending'), [registrations]);
@@ -197,6 +309,36 @@ const TournamentDetail = () => {
     }
   };
 
+  const handleGenerateBracket = async () => {
+    if (!window.confirm(`¿Generar bracket con ${acceptedRegs.length} equipos? El emparejamiento es aleatorio.`)) return;
+    setSubmitting(true);
+    setError('');
+    try {
+      await routesAPI.generateBracket(id);
+      flashMsg('Bracket generado');
+      await loadAll();
+    } catch (err) {
+      setError(err.message || 'No se pudo generar el bracket');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleDeleteBracket = async () => {
+    if (!window.confirm('¿Borrar el bracket? Se eliminarán TODOS los partidos del bracket. Esta acción no se puede deshacer.')) return;
+    setSubmitting(true);
+    setError('');
+    try {
+      await routesAPI.deleteBracket(id);
+      flashMsg('Bracket eliminado');
+      await loadAll();
+    } catch (err) {
+      setError(err.message || 'No se pudo borrar el bracket');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-valorant-dark flex items-center justify-center">
@@ -241,7 +383,7 @@ const TournamentDetail = () => {
             <div className="flex items-center gap-4 mb-4">
               {badge && <span className={badge.className}>{badge.label}</span>}
             </div>
-            <h1 className="text-6xl font-tungsten text-white tracking-wider mb-4">{tournament.name}</h1>
+            <h1 className="text-4xl md:text-6xl font-tungsten text-white tracking-wider mb-4">{tournament.name}</h1>
             {tournament.description && (
               <p className="text-xl text-valorant-light max-w-3xl">{tournament.description}</p>
             )}
@@ -250,13 +392,13 @@ const TournamentDetail = () => {
       </div>
 
       <div className="bg-valorant-dark-secondary border-b-2 border-valorant-dark-tertiary sticky top-20 z-40">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex gap-2">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 overflow-x-auto">
+          <div className="flex gap-2 min-w-max">
             {tabs.map((tab) => (
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className={`px-6 py-4 font-bold uppercase text-sm transition-all clip-corner-sm ${
+                className={`px-4 md:px-6 py-3 md:py-4 font-bold uppercase text-sm whitespace-nowrap transition-all clip-corner-sm ${
                   activeTab === tab.id
                     ? 'bg-valorant-red text-white'
                     : 'text-valorant-light hover:text-white hover:bg-valorant-dark-tertiary'
@@ -372,7 +514,7 @@ const TournamentDetail = () => {
                 </div>
               </div>
               <div className="card-valorant p-6 text-center">
-                <div className="text-xs text-valorant-light uppercase mb-2">Equipos Inscriptos</div>
+                <div className="text-xs text-valorant-light uppercase mb-2">Equipos Inscritos</div>
                 <div className="text-3xl font-tungsten text-white">{acceptedRegs.length}</div>
               </div>
               <div className="card-valorant p-6 text-center">
@@ -387,9 +529,9 @@ const TournamentDetail = () => {
 
             <div>
               <h2 className="text-3xl font-tungsten text-white mb-6 tracking-wider">PARTIDOS RECIENTES</h2>
-              {matches.length > 0 ? (
+              {playableMatches.length > 0 ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  {matches.slice(0, 4).map((match) => <MatchCard key={match.id} match={match} />)}
+                  {playableMatches.slice(0, 4).map((match) => <MatchCard key={match.id} match={match} />)}
                 </div>
               ) : (
                 <div className="text-center py-12 text-valorant-light">Aún no hay partidos programados</div>
@@ -401,9 +543,9 @@ const TournamentDetail = () => {
         {activeTab === 'matches' && (
           <div>
             <h2 className="text-3xl font-tungsten text-white mb-6 tracking-wider">TODOS LOS PARTIDOS</h2>
-            {matches.length > 0 ? (
+            {playableMatches.length > 0 ? (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {matches.map((match) => <MatchCard key={match.id} match={match} />)}
+                {playableMatches.map((match) => <MatchCard key={match.id} match={match} />)}
               </div>
             ) : (
               <div className="text-center py-12 text-valorant-light">Aún no hay partidos programados</div>
@@ -413,47 +555,37 @@ const TournamentDetail = () => {
 
         {activeTab === 'bracket' && (
           <div>
-            <h2 className="text-3xl font-tungsten text-white mb-6 tracking-wider">PARTIDOS POR RONDA</h2>
-            <p className="text-xs text-valorant-light italic mb-6">
-              El modelo aún no soporta brackets con avance automático. Esta vista agrupa los partidos por su nombre de ronda.
-            </p>
+            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
+              <h2 className="text-3xl font-tungsten text-white tracking-wider">BRACKET</h2>
+              {isManager && tournament.bracket_size != null && (
+                <button
+                  onClick={handleDeleteBracket}
+                  disabled={submitting || bracketHasFinished}
+                  title={bracketHasFinished ? 'No se puede borrar: ya hay partidos reportados' : ''}
+                  className="px-4 py-2 text-xs font-bold uppercase border border-valorant-red text-valorant-red hover:bg-valorant-red hover:text-white transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  Borrar bracket
+                </button>
+              )}
+            </div>
 
-            {matchesByRound.length > 0 ? (
-              <div className="space-y-8">
-                {matchesByRound.map((round) => (
-                  <div key={round.name} className="card-valorant p-6">
-                    <h3 className="text-2xl font-tungsten text-valorant-red mb-4 tracking-wider">{round.name}</h3>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      {round.matches.map((match) => (
-                        <div key={match.id} className="bg-valorant-dark-tertiary p-4 clip-corner-sm">
-                          <div className="flex justify-between items-center mb-2">
-                            <span className="text-white font-bold">{match.team1.name}</span>
-                            <span className="text-2xl font-tungsten text-valorant-red">
-                              {match.score1 != null ? match.score1 : '-'}
-                            </span>
-                          </div>
-                          <div className="divider-glow my-2"></div>
-                          <div className="flex justify-between items-center">
-                            <span className="text-white font-bold">{match.team2.name}</span>
-                            <span className="text-2xl font-tungsten text-white">
-                              {match.score2 != null ? match.score2 : '-'}
-                            </span>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                ))}
-              </div>
+            {tournament.bracket_size == null ? (
+              <BracketEmptyState
+                isManager={isManager}
+                acceptedCount={acceptedRegs.length}
+                allowedSizes={ALLOWED_BRACKET_SIZES}
+                onGenerate={handleGenerateBracket}
+                disabled={submitting}
+              />
             ) : (
-              <div className="text-center py-12 text-valorant-light">Aún no hay partidos programados</div>
+              <BracketTree rounds={bracketRounds} />
             )}
           </div>
         )}
 
         {activeTab === 'teams' && (
           <div>
-            <h2 className="text-3xl font-tungsten text-white mb-6 tracking-wider">EQUIPOS INSCRIPTOS</h2>
+            <h2 className="text-3xl font-tungsten text-white mb-6 tracking-wider">EQUIPOS INSCRITOS</h2>
             {acceptedRegs.length > 0 ? (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {acceptedRegs.map((r) => (
@@ -472,7 +604,7 @@ const TournamentDetail = () => {
               </div>
             ) : (
               <div className="text-center py-12 text-valorant-light">
-                Aún no hay equipos inscriptos.
+                Aún no hay equipos inscritos.
                 {tournament.status === 'upcoming' && myFounderTeam && !myRegistration && (
                   <span> ¡Sé el primero!</span>
                 )}

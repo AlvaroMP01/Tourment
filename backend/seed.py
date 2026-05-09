@@ -3,11 +3,15 @@
 Crea/actualiza:
 - 1 admin (`admin`)                           — controlado por ADMIN_PASSWORD
 - 1 tournament_manager (`tm_carlos`)
-- 2 coaches: `coach_red` (coach) y `coach_blue` (player_coach)
-- 10 players: `player_01` ... `player_10`
-- 2 teams: "Red Phoenix" [RPX] y "Blue Wolves" [BWV] con rosters armados
-- 1 tournament: "Torneo de Pruebas 2026" (status=upcoming)
-- 3 matches entre los 2 teams (2 scheduled, 1 live)
+- 4 coaches: `coach_red` (coach), `coach_blue` (player_coach),
+              `coach_green` (coach), `coach_yellow` (player_coach)
+- 19 players: `player_01` ... `player_19`
+- 4 teams: "Red Phoenix" [RPX], "Blue Wolves" [BWV],
+           "Green Hawks" [GHK], "Yellow Tigers" [YTG] con rosters armados
+- 2 tournaments:
+    * "Torneo de Pruebas 2026" (upcoming) con 3 matches sueltos entre Red/Blue
+    * "Bracket de Pruebas 2026" (upcoming) con los 4 teams inscritos (accepted),
+       SIN matches — listo para que admin genere bracket desde la UI
 
 Uso:
     docker exec backend python seed.py
@@ -143,10 +147,14 @@ def seed_tournament_manager(password):
 def seed_coaches(password):
     coach_red, c1 = upsert_test_user('coach_red', 'coach', password)
     coach_blue, c2 = upsert_test_user('coach_blue', 'player_coach', password)
+    coach_green, c3 = upsert_test_user('coach_green', 'coach', password)
+    coach_yellow, c4 = upsert_test_user('coach_yellow', 'player_coach', password)
     db.session.commit()
-    print(f"  {'CREATED' if c1 else 'EXISTS '}: 'coach_red' (role=coach)")
-    print(f"  {'CREATED' if c2 else 'EXISTS '}: 'coach_blue' (role=player_coach)")
-    return coach_red, coach_blue
+    print(f"  {'CREATED' if c1 else 'EXISTS '}: 'coach_red'    (role=coach)")
+    print(f"  {'CREATED' if c2 else 'EXISTS '}: 'coach_blue'   (role=player_coach)")
+    print(f"  {'CREATED' if c3 else 'EXISTS '}: 'coach_green'  (role=coach)")
+    print(f"  {'CREATED' if c4 else 'EXISTS '}: 'coach_yellow' (role=player_coach)")
+    return coach_red, coach_blue, coach_green, coach_yellow
 
 
 def seed_players(password, count=10):
@@ -202,10 +210,18 @@ def seed_team(name, tag, region, logo, founder):
     return team
 
 
-def seed_team_rosters(red, blue, players):
-    """Llena ambos teams con players de prueba. Cada player solo se asigna
+def seed_team_rosters(red, blue, green, yellow, players):
+    """Llena los 4 teams con players de prueba. Cada player solo se asigna
     si no pertenece ya a otro team. El team puede tener miembros desde un
-    seed previo: en ese caso simplemente no agrega nada."""
+    seed previo: en ese caso simplemente no agrega nada.
+
+    Distribución (asume players ordenados player_01..player_18):
+    - Red Phoenix    (coach, 0 plazas ocupadas) → players[0:5]   = player_01..05
+    - Blue Wolves    (player_coach, 1 plaza)    → players[5:9]   = player_06..09
+    - player[9] = player_10 queda libre (para testear join_request)
+    - Green Hawks    (coach, 0 plazas ocupadas) → players[10:15] = player_11..15
+    - Yellow Tigers  (player_coach, 1 plaza)    → players[15:19] = player_16..19
+    """
     red_roster = [
         ('Duelist', 'Jett'),
         ('Initiator', 'Sova'),
@@ -220,16 +236,40 @@ def seed_team_rosters(red, blue, players):
         ('Controller', 'Brimstone'),
         ('Sentinel', 'Cypher'),
     ]
+    green_roster = [
+        ('Duelist', 'Neon'),
+        ('Initiator', 'Fade'),
+        ('Controller', 'Astra'),
+        ('Sentinel', 'Sage'),
+        ('Duelist', 'Yoru'),
+    ]
+    yellow_roster = [
+        # coach_yellow es player_coach y ocupa 1 plaza, así que metemos 4 players
+        ('Duelist', 'Reyna'),
+        ('Initiator', 'KAY/O'),
+        ('Controller', 'Viper'),
+        ('Sentinel', 'Chamber'),
+    ]
 
     if red:
         for player, (igr, agent) in zip(players[:5], red_roster):
             if add_player_to_team(red, player, igr, agent):
-                print(f"  + {player.nickname:<12} → Red Phoenix  ({igr}, {agent})")
+                print(f"  + {player.nickname:<12} → Red Phoenix    ({igr}, {agent})")
 
     if blue:
         for player, (igr, agent) in zip(players[5:9], blue_roster):
             if add_player_to_team(blue, player, igr, agent):
-                print(f"  + {player.nickname:<12} → Blue Wolves  ({igr}, {agent})")
+                print(f"  + {player.nickname:<12} → Blue Wolves    ({igr}, {agent})")
+
+    if green:
+        for player, (igr, agent) in zip(players[10:15], green_roster):
+            if add_player_to_team(green, player, igr, agent):
+                print(f"  + {player.nickname:<12} → Green Hawks    ({igr}, {agent})")
+
+    if yellow:
+        for player, (igr, agent) in zip(players[15:19], yellow_roster):
+            if add_player_to_team(yellow, player, igr, agent):
+                print(f"  + {player.nickname:<12} → Yellow Tigers  ({igr}, {agent})")
 
     db.session.commit()
 
@@ -257,6 +297,48 @@ def seed_tournament(name='Torneo de Pruebas 2026'):
     return t
 
 
+def seed_bracket_tournament(teams, name='Bracket de Pruebas 2026'):
+    """Crea un torneo upcoming con N teams inscritos (accepted) y SIN matches.
+    Pensado para que admin/manager pueda generar el bracket desde la UI.
+    Idempotente: si el torneo ya existe, no toca matches ni inscripciones.
+    """
+    teams = [t for t in teams if t is not None]
+    if not teams:
+        print("  SKIP   : no hay teams válidos para inscribir, no se crea torneo de bracket")
+        return None
+
+    existing = Tournament.query.filter_by(name=name).first()
+    if existing:
+        print(f"  EXISTS : tournament '{name}' (status={existing.status})")
+        return existing
+
+    today = date.today()
+    t = Tournament(
+        name=name,
+        start_date=today,
+        end_date=today + timedelta(days=7),
+        status='upcoming',
+        image='🥇',
+        prize_amount=5000,
+        prize_currency='EUR',
+        description=f'Torneo listo para generar bracket de eliminación directa con {len(teams)} equipos. Probá el botón "Generar bracket" en la pestaña Bracket.',
+    )
+    db.session.add(t)
+    db.session.flush()
+
+    for team in teams:
+        db.session.add(TournamentRegistration(
+            tournament_id=t.id,
+            team_id=team.id,
+            status='accepted',
+        ))
+    db.session.commit()
+    print(f"  CREATED: tournament '{name}' (upcoming, {today} → {today + timedelta(days=7)})")
+    print(f"           {len(teams)} team(s) inscritos (accepted): {', '.join(tm.name for tm in teams)}")
+    print(f"           SIN matches — generá el bracket desde la UI")
+    return t
+
+
 def seed_matches(tournament, red, blue):
     """Siembra matches scheduled/live entre los 2 teams. NO siembra finished:
     reportar resultados muta UserStat agregado y romper idempotencia al
@@ -271,7 +353,7 @@ def seed_matches(tournament, red, blue):
         return
 
     # Creamos las inscripciones (ambos teams accepted) antes de los matches
-    # para que la UI muestre los equipos como inscriptos. Idempotente.
+    # para que la UI muestre los equipos como inscritos. Idempotente.
     for team in (red, blue):
         existing_reg = TournamentRegistration.query.filter_by(
             tournament_id=tournament.id, team_id=team.id
@@ -321,34 +403,43 @@ def main():
         seed_tournament_manager(user_password)
 
         print("\n=== seed: coaches ===")
-        coach_red, coach_blue = seed_coaches(user_password)
+        coach_red, coach_blue, coach_green, coach_yellow = seed_coaches(user_password)
 
         print("\n=== seed: players ===")
-        players = seed_players(user_password, count=10)
+        players = seed_players(user_password, count=19)
 
         print("\n=== seed: teams ===")
-        red = seed_team('Red Phoenix', 'RPX', 'LAS', '🔥', coach_red)
-        blue = seed_team('Blue Wolves', 'BWV', 'EU', '🐺', coach_blue)
+        red = seed_team('Red Phoenix',   'RPX', 'Sevilla',  '🔥', coach_red)
+        blue = seed_team('Blue Wolves',  'BWV', 'Málaga',   '🐺', coach_blue)
+        green = seed_team('Green Hawks', 'GHK', 'Granada',  '🦅', coach_green)
+        yellow = seed_team('Yellow Tigers', 'YTG', 'Cádiz', '🐯', coach_yellow)
 
         print("\n=== seed: rosters ===")
-        seed_team_rosters(red, blue, players)
+        seed_team_rosters(red, blue, green, yellow, players)
 
-        print("\n=== seed: tournament ===")
+        print("\n=== seed: tournament (matches sueltos) ===")
         tournament = seed_tournament()
 
         print("\n=== seed: matches ===")
         seed_matches(tournament, red, blue)
 
+        print("\n=== seed: tournament (bracket-ready) ===")
+        seed_bracket_tournament([red, blue, green, yellow])
+
         print("\n=== resumen de credenciales ===")
-        print(f"  admin       password=ADMIN_PASSWORD (env)")
-        print(f"  resto       password='{user_password}' (override con SEED_USER_PASSWORD)")
+        print(f"  admin         password=ADMIN_PASSWORD (env)")
+        print(f"  resto         password='{user_password}' (override con SEED_USER_PASSWORD)")
         print(f"  --")
-        print(f"  tm_carlos   role=tournament_manager")
-        print(f"  coach_red   role=coach           (founder Red Phoenix)")
-        print(f"  coach_blue  role=player_coach    (founder Blue Wolves, ocupa plaza)")
-        print(f"  player_01..05  → Red Phoenix")
-        print(f"  player_06..09  → Blue Wolves")
-        print(f"  player_10      → libre (para testear flujo de join_request)")
+        print(f"  tm_carlos     role=tournament_manager")
+        print(f"  coach_red     role=coach          (founder Red Phoenix)")
+        print(f"  coach_blue    role=player_coach   (founder Blue Wolves, ocupa plaza)")
+        print(f"  coach_green   role=coach          (founder Green Hawks)")
+        print(f"  coach_yellow  role=player_coach   (founder Yellow Tigers, ocupa plaza)")
+        print(f"  player_01..05 → Red Phoenix")
+        print(f"  player_06..09 → Blue Wolves")
+        print(f"  player_10     → libre (para testear flujo de join_request)")
+        print(f"  player_11..15 → Green Hawks")
+        print(f"  player_16..19 → Yellow Tigers")
 
 
 if __name__ == '__main__':

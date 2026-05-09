@@ -18,7 +18,7 @@ const Home = () => {
     const load = async () => {
       try {
         const [news, ts, tms] = await Promise.all([
-          routesAPI.getNews().catch(() => []),
+          routesAPI.getNews({ limit: 6 }).catch(() => []),
           routesAPI.getTournaments().catch(() => []),
           routesAPI.getTeams().catch(() => []),
         ]);
@@ -154,7 +154,7 @@ const Home = () => {
 
       <section className="bg-animated pattern-overlay py-20">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <h2 className="text-5xl font-tungsten text-white mb-4 tracking-wider">¿LISTO PARA COMPETIR?</h2>
+          <h2 className="text-3xl md:text-5xl font-tungsten text-white mb-4 tracking-wider">¿LISTO PARA COMPETIR?</h2>
           <p className="text-xl text-valorant-light mb-8">
             Únete a miles de jugadores y demuestra tu habilidad en el campo de batalla
           </p>

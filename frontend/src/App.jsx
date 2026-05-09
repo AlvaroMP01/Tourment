@@ -13,18 +13,12 @@ import MyTeams from './pages/MyTeams';
 import Profile from './pages/Profile';
 import TeamDetail from './pages/TeamDetail';
 import { AuthProvider } from './context/AuthContext';
-import { useAuth } from './context/AuthContext';
 import ProtectedRoute from './components/ProtectedRoute';
+import RoleRoute from './components/RoleRoute';
+import PublicOnlyRoute from './components/PublicOnlyRoute';
 import { Navigate } from 'react-router-dom';
 
-// Restringe a una lista de roles. Default: solo admin.
-const RoleRoute = ({ children, allowedRoles = ['admin'] }) => {
-  const { user } = useAuth();
-  if (!user || !allowedRoles.includes(user.role)) {
-    return <Navigate to="/" replace />;
-  }
-  return children;
-};
+const TEAM_MEMBER_ROLES = ['player', 'coach', 'player_coach'];
 
 function App() {
   return (
@@ -40,8 +34,16 @@ function App() {
             <Route path="/teams" element={<Teams />} />
             <Route path="/players" element={<Players />} />
             <Route path="/news" element={<News />} />
-            <Route path="/login" element={<Login />} />
-            <Route path="/register" element={<Register />} />
+            <Route path="/login" element={
+              <PublicOnlyRoute>
+                <Login />
+              </PublicOnlyRoute>
+            } />
+            <Route path="/register" element={
+              <PublicOnlyRoute>
+                <Register />
+              </PublicOnlyRoute>
+            } />
 
             {/* Rutas Protegidas (Cualquier usuario logueado) */}
             <Route path="/teams/:id" element={
@@ -51,7 +53,9 @@ function App() {
             } />
             <Route path="/my-teams" element={
               <ProtectedRoute>
-                <MyTeams />
+                <RoleRoute allowedRoles={TEAM_MEMBER_ROLES}>
+                  <MyTeams />
+                </RoleRoute>
               </ProtectedRoute>
             } />
             <Route path="/profile" element={

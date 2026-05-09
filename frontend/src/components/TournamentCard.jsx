@@ -31,6 +31,8 @@ const TournamentCard = ({ tournament }) => {
   const hasPrize = prizeAmount != null && Number(prizeAmount) > 0;
   const prizeText = tournament.prize || formatPrize(prizeAmount, prizeCurrency);
 
+  const teamsCount = tournament.acceptedTeamsCount ?? tournament.accepted_teams_count ?? null;
+
   return (
     <Link to={`/tournaments/${tournament.id}`} className="block group">
       <div className="card-valorant overflow-hidden h-full transition-transform duration-300 group-hover:scale-105">
@@ -41,6 +43,15 @@ const TournamentCard = ({ tournament }) => {
           {badge && (
             <div className="absolute top-4 right-4">
               <span className={badge.className}>{badge.label}</span>
+            </div>
+          )}
+
+          {teamsCount != null && (
+            <div className="absolute top-4 left-4 bg-valorant-dark/80 border border-valorant-red px-3 py-1 clip-corner-sm flex items-center gap-1.5 text-xs font-bold uppercase text-white">
+              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a4 4 0 00-3-3.87M9 20H4v-2a4 4 0 013-3.87m6-5.13a4 4 0 11-8 0 4 4 0 018 0zm6 3a3 3 0 11-6 0 3 3 0 016 0z" />
+              </svg>
+              <span>{teamsCount} {teamsCount === 1 ? 'equipo' : 'equipos'}</span>
             </div>
           )}
         </div>

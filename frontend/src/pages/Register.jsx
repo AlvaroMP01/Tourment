@@ -47,7 +47,7 @@ const Register = () => {
         <div className="w-16 h-16 bg-valorant-red clip-corner flex items-center justify-center mx-auto mb-4">
           <span className="text-3xl font-bold text-white">V</span>
         </div>
-        <h2 className="mt-6 text-center text-5xl font-tungsten text-white tracking-wider">
+        <h2 className="mt-6 text-center text-3xl md:text-5xl font-tungsten text-white tracking-wider">
           REGÍSTRATE
         </h2>
       </div>

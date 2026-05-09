@@ -8,18 +8,12 @@ export const AuthProvider = ({ children }) => {
   const [token, setToken] = useState(localStorage.getItem('token'));
   const [loading, setLoading] = useState(true);
 
-  const normalizeUser = (u) => {
-    if (!u) return null;
-    // Compatibilidad: backend ahora usa `role`, el frontend históricamente usaba `role`
-    return { ...u, role: u.role ?? u.role };
-  };
-
   useEffect(() => {
     const loadUser = async () => {
       if (token) {
         try {
           const userData = await routesAPI.getMe(token);
-          setUser(normalizeUser(userData));
+          setUser(userData);
         } catch (error) {
           console.error("Error recuperando usuario:", error);
           logout();
@@ -34,7 +28,7 @@ export const AuthProvider = ({ children }) => {
   const login = async (credentials) => {
     const data = await routesAPI.login(credentials);
     setToken(data.token);
-    setUser(normalizeUser(data.user));
+    setUser(data.user);
     localStorage.setItem('token', data.token);
     return data;
   };
@@ -55,9 +49,8 @@ export const AuthProvider = ({ children }) => {
   const refreshUser = async () => {
     if (!token) return null;
     const userData = await routesAPI.getMe(token);
-    const normalized = normalizeUser(userData);
-    setUser(normalized);
-    return normalized;
+    setUser(userData);
+    return userData;
   };
 
   const value = {

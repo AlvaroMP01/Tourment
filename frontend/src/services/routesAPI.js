@@ -25,7 +25,8 @@ export const routesAPI = {
   getPlayers(params) { return requestAPI.get("/users/players", params); },
 
   // --- NEWS ---
-  getNews() { return requestAPI.get("/news"); },
+  // params opcional: { limit: int } — backend default 20, max 50
+  getNews(params) { return requestAPI.get("/news", params); },
 
   // --- STATS (público — landing/Hero) ---
   getStatsOverview() { return requestAPI.get("/stats/overview"); },
@@ -38,6 +39,14 @@ export const routesAPI = {
   deleteTournament(id) { return requestAPI.del(`/tournaments/${id}`); },
   uploadTournamentImage(id, file) { return requestAPI.upload(`/tournaments/${id}/image`, file); },
   deleteTournamentImage(id) { return requestAPI.del(`/tournaments/${id}/image`); },
+
+  // --- BRACKET (single-elim, sizes 4|8|16) ---
+  generateBracket(tournamentId) {
+    return requestAPI.post(`/tournaments/${tournamentId}/bracket`);
+  },
+  deleteBracket(tournamentId) {
+    return requestAPI.del(`/tournaments/${tournamentId}/bracket`);
+  },
 
   // --- MATCHES (anidados bajo tournament) ---
   getTournamentMatches(tournamentId) {

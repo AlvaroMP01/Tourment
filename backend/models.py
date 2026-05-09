@@ -102,6 +102,8 @@ class Tournament(db.Model):
     prize_amount = db.Column(db.Numeric(10, 2)) # monto del premio. NULL si no hay.
     prize_currency = db.Column(db.String(3))    # ISO 4217. Por ahora solo 'EUR' aceptado en API.
     description = db.Column(db.Text)
+    # Bracket de eliminación directa. NULL = no generado. 4|8|16 = generado con ese tamaño.
+    bracket_size = db.Column(db.Integer)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
     # Relationships
@@ -132,14 +134,29 @@ class Match(db.Model):
     __tablename__ = 'matches'
     id = db.Column(db.Integer, primary_key=True)
     tournament_id = db.Column(db.Integer, db.ForeignKey('tournaments.id', ondelete='SET NULL'))
-    team1_id = db.Column(db.Integer, db.ForeignKey('teams.id', ondelete='CASCADE'), nullable=False)
-    team2_id = db.Column(db.Integer, db.ForeignKey('teams.id', ondelete='CASCADE'), nullable=False)
+    # team1/team2 son NULLABLE para soportar slots vacíos del bracket que se llenan
+    # cuando avanza el ganador del partido anterior. En matches no-bracket (amistosos
+    # o creados manualmente) ambos deben venir seteados — eso lo valida el endpoint.
+    team1_id = db.Column(db.Integer, db.ForeignKey('teams.id', ondelete='CASCADE'))
+    team2_id = db.Column(db.Integer, db.ForeignKey('teams.id', ondelete='CASCADE'))
     score_team1 = db.Column(db.Integer, default=0)
     score_team2 = db.Column(db.Integer, default=0)
     map_name = db.Column(db.String(50))
     round_name = db.Column(db.String(50))
     status = db.Column(db.Enum('scheduled', 'live', 'finished'), default='scheduled')
     match_date = db.Column(db.DateTime)
+
+    # Campos de bracket. NULL en matches sueltos. Seteados cuando el match
+    # forma parte de un bracket de eliminación directa.
+    # bracket_round: 1 = primera ronda. Crece hasta la final (round = log2(size)).
+    # bracket_position: índice del slot dentro de la ronda (1..N). Identifica
+    #                   posición visual en la columna de esa ronda.
+    # next_match_id + next_match_slot: a qué match avanza el ganador y qué
+    #                   slot ocupa. NULL en la final.
+    bracket_round = db.Column(db.Integer)
+    bracket_position = db.Column(db.Integer)
+    next_match_id = db.Column(db.Integer, db.ForeignKey('matches.id', ondelete='SET NULL'))
+    next_match_slot = db.Column(db.Enum('team1', 'team2'))
 
     player_stats = db.relationship('MatchPlayerStat', backref='match', cascade="all, delete-orphan")
 

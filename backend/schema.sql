@@ -80,6 +80,7 @@ CREATE TABLE IF NOT EXISTS tournaments (
     prize_amount DECIMAL(10,2) DEFAULT NULL, -- monto del premio. NULL si no hay premio.
     prize_currency CHAR(3) DEFAULT NULL, -- ISO 4217. Solo 'EUR' permitido en API por ahora.
     description TEXT,
+    bracket_size INT DEFAULT NULL, -- 4|8|16 si hay bracket generado, NULL si no.
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -100,20 +101,29 @@ CREATE TABLE IF NOT EXISTS tournament_registrations (
 );
 
 -- 7. Historial de Partidas (Matches)
+-- team1_id y team2_id son NULLABLE para soportar slots vacíos en brackets
+-- (rondas posteriores arrancan vacías y se llenan cuando avanza un ganador).
+-- En matches no-bracket, ambos vienen obligatorios (validado en el endpoint).
 CREATE TABLE IF NOT EXISTS matches (
     id INT AUTO_INCREMENT PRIMARY KEY,
     tournament_id INT, -- Puede ser NULL si es un amistoso
-    team1_id INT NOT NULL,
-    team2_id INT NOT NULL,
+    team1_id INT,
+    team2_id INT,
     score_team1 INT DEFAULT 0,
     score_team2 INT DEFAULT 0,
     map_name VARCHAR(50),
-    round_name VARCHAR(50), -- Ej. "Semifinal", "Jornada 1"
+    round_name VARCHAR(50), -- Ej. "Semifinal", "Jornada 1", o nombre auto del bracket
     status ENUM('scheduled', 'live', 'finished') DEFAULT 'scheduled',
     match_date DATETIME,
+    -- Bracket fields (NULL en matches sueltos)
+    bracket_round INT DEFAULT NULL,
+    bracket_position INT DEFAULT NULL,
+    next_match_id INT DEFAULT NULL,
+    next_match_slot ENUM('team1', 'team2') DEFAULT NULL,
     FOREIGN KEY (tournament_id) REFERENCES tournaments(id) ON DELETE SET NULL,
     FOREIGN KEY (team1_id) REFERENCES teams(id) ON DELETE CASCADE,
-    FOREIGN KEY (team2_id) REFERENCES teams(id) ON DELETE CASCADE
+    FOREIGN KEY (team2_id) REFERENCES teams(id) ON DELETE CASCADE,
+    FOREIGN KEY (next_match_id) REFERENCES matches(id) ON DELETE SET NULL
 );
 
 -- 7b. Stats por jugador-en-partida (source of truth de las estadísticas)
