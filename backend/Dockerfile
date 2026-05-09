@@ -25,4 +25,9 @@ EXPOSE 5000
 # debe correrse en producción: no maneja concurrencia ni recursos correctamente.
 # Workers fijos en 2 — Railway lo escala vertical, no horizontal por workers.
 # Railway respeta $PORT si está seteado; sino usa 5000.
-CMD ["sh", "-c", "gunicorn -b 0.0.0.0:${PORT:-5000} -w 2 --timeout 30 --access-logfile - --error-logfile - app:app"]
+#
+# Antes de gunicorn:
+#   1. db.create_all() — idempotente, crea tablas si no existen.
+#   2. seed.py — siembra datos de prueba (también idempotente).
+# Si seed falla (p. ej. ADMIN_PASSWORD no está), no bloquea el arranque.
+CMD ["sh", "-c", "python -c 'from app import app, db; ctx = app.app_context(); ctx.push(); db.create_all()' && (python seed.py 2>&1 || echo '[ENTRYPOINT] seed.py falló o se omitió, continuando con gunicorn') && gunicorn -b 0.0.0.0:${PORT:-5000} -w 2 --timeout 30 --access-logfile - --error-logfile - app:app"]
