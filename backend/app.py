@@ -26,6 +26,10 @@ _allowed_origins_env = os.getenv('ALLOWED_ORIGINS', 'http://localhost:5173')
 _allowed_origins = [o.strip() for o in _allowed_origins_env.split(',') if o.strip()]
 CORS(app, origins=_allowed_origins, supports_credentials=True)
 
+# Storage del rate-limit. Por defecto memoria (cada worker tiene su propio
+# contador). Si se setea REDIS_URL (plugin Redis de Railway), pasa a usarlo
+# y los contadores se comparten entre workers e instancias.
+app.config['RATELIMIT_STORAGE_URI'] = os.getenv('REDIS_URL', 'memory://')
 limiter.init_app(app)
 
 # El archivo entra con hasta 1MB; el helper lo recomprime a <=500KB.
