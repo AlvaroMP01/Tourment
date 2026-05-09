@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { routesAPI } from '../services/routesAPI';
 import Modal from '../components/Modal';
@@ -336,7 +337,7 @@ const MyTeams = () => {
             ) : user?.role === 'player' ? (
               <p className="text-gray-400">
                 Como <strong className="text-white">player</strong>, tienes que solicitar unirte a un equipo
-                desde la <a href="/teams" className="text-valorant-red font-bold">lista de equipos</a>.
+                desde la <Link to="/teams" className="text-valorant-red font-bold">lista de equipos</Link>.
               </p>
             ) : (
               <p className="text-gray-400">

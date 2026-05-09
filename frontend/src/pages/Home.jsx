@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import Hero from '../components/Hero';
 import TournamentCard from '../components/TournamentCard';
 import NewsCard from '../components/NewsCard';
@@ -56,9 +57,9 @@ const Home = () => {
             <h2 className="text-4xl font-tungsten text-white tracking-wider">TORNEOS DESTACADOS</h2>
             <div className="h-1 w-24 bg-valorant-red mt-2"></div>
           </div>
-          <a href="/tournaments" className="text-valorant-red hover:text-white transition-colors font-bold uppercase text-sm">
+          <Link to="/tournaments" className="text-valorant-red hover:text-white transition-colors font-bold uppercase text-sm">
             Ver todos →
-          </a>
+          </Link>
         </div>
 
         {featuredTournaments.length > 0 ? (
@@ -93,9 +94,9 @@ const Home = () => {
               <h2 className="text-4xl font-tungsten text-white tracking-wider">TOP EQUIPOS</h2>
               <div className="h-1 w-24 bg-valorant-red mt-2"></div>
             </div>
-            <a href="/teams" className="text-valorant-red hover:text-white transition-colors font-bold uppercase text-sm">
+            <Link to="/teams" className="text-valorant-red hover:text-white transition-colors font-bold uppercase text-sm">
               Ver ranking →
-            </a>
+            </Link>
           </div>
 
           {topTeams.length > 0 ? (
@@ -119,9 +120,9 @@ const Home = () => {
               Últimas noticias del mundo competitivo de VALORANT
             </p>
           </div>
-          <a href="/news" className="text-valorant-red hover:text-white transition-colors font-bold uppercase text-sm">
+          <Link to="/news" className="text-valorant-red hover:text-white transition-colors font-bold uppercase text-sm">
             Más noticias →
-          </a>
+          </Link>
         </div>
 
         {loadingNews ? (
@@ -159,10 +160,10 @@ const Home = () => {
             Únete a miles de jugadores y demuestra tu habilidad en el campo de batalla
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <a href="/tournaments" className="btn-valorant">Inscribirse Ahora</a>
-            <a href="/teams" className="btn-valorant bg-transparent border-2 border-valorant-red hover:bg-valorant-red">
+            <Link to="/tournaments" className="btn-valorant">Inscribirse Ahora</Link>
+            <Link to="/teams" className="btn-valorant bg-transparent border-2 border-valorant-red hover:bg-valorant-red">
               Crear Equipo
-            </a>
+            </Link>
           </div>
         </div>
       </section>

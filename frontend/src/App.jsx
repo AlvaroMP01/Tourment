@@ -1,4 +1,4 @@
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Link } from 'react-router-dom';
 import Navbar from './components/Navbar';
 import Home from './pages/Home';
 import Tournaments from './pages/Tournaments';
@@ -17,6 +17,7 @@ import ProtectedRoute from './components/ProtectedRoute';
 import RoleRoute from './components/RoleRoute';
 import PublicOnlyRoute from './components/PublicOnlyRoute';
 import { Navigate } from 'react-router-dom';
+
 
 const TEAM_MEMBER_ROLES = ['player', 'coach', 'player_coach'];
 
@@ -92,24 +93,24 @@ function App() {
                   </h4>
                   <ul className="space-y-2 text-sm">
                     <li>
-                      <a href="/tournaments" className="text-valorant-light hover:text-valorant-red transition-colors">
+                      <Link to="/tournaments" className="text-valorant-light hover:text-valorant-red transition-colors">
                         Torneos
-                      </a>
+                      </Link>
                     </li>
                     <li>
-                      <a href="/teams" className="text-valorant-light hover:text-valorant-red transition-colors">
+                      <Link to="/teams" className="text-valorant-light hover:text-valorant-red transition-colors">
                         Equipos
-                      </a>
+                      </Link>
                     </li>
                     <li>
-                      <a href="/players" className="text-valorant-light hover:text-valorant-red transition-colors">
+                      <Link to="/players" className="text-valorant-light hover:text-valorant-red transition-colors">
                         Jugadores
-                      </a>
+                      </Link>
                     </li>
                     <li>
-                      <a href="/news" className="text-valorant-light hover:text-valorant-red transition-colors">
+                      <Link to="/news" className="text-valorant-light hover:text-valorant-red transition-colors">
                         Noticias
-                      </a>
+                      </Link>
                     </li>
                   </ul>
                 </div>
