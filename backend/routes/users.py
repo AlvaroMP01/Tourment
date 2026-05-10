@@ -134,6 +134,48 @@ def list_players():
     return jsonify(result), 200
 
 
+@users_bp.route('/<int:user_id>', methods=['GET'])
+def get_public_profile(user_id):
+    """Perfil público de cualquier usuario. Sin auth requerida.
+    No incluye campos sensibles (email, password). Devuelve apodo,
+    bio, avatar, rol, stats y equipo actual si tiene."""
+    user = User.query.get(user_id)
+    if not user:
+        return jsonify({"error": "Usuario no encontrado"}), 404
+
+    membership = TeamMember.query.filter_by(user_id=user.id).first()
+    team_info = None
+    if membership and membership.team:
+        team_info = {
+            "team_id": membership.team.id,
+            "team_name": membership.team.name,
+            "team_tag": membership.team.tag,
+            "team_logo": membership.team.logo,
+            "ingame_role": membership.ingame_role,
+            "favorite_agent": membership.favorite_agent,
+        }
+
+    s = user.stats
+    return jsonify({
+        "id": user.id,
+        "nickname": user.nickname,
+        "custom_name": user.custom_name,
+        "bio": user.bio,
+        "avatar": user.avatar,
+        "role": user.role,
+        "team": team_info,
+        "stats": {
+            "kills": s.kills if s else 0,
+            "deaths": s.deaths if s else 0,
+            "assists": s.assists if s else 0,
+            "adr": float(s.adr) if s else 0.0,
+            "hs_percentage": float(s.hs_percentage) if s else 0.0,
+            "clutches": s.clutches if s else 0,
+            "matches_played": s.matches_played if s else 0,
+        }
+    }), 200
+
+
 @users_bp.route('/me', methods=['PUT'])
 @token_required
 def update_my_profile(current_user):

@@ -18,6 +18,9 @@ export const routesAPI = {
   // params opcional: { sort_by: 'kd'|'adr'|'hs'|'clutches'|'kills'|'assists'|'matches', min_matches: int }
   getPlayers(params) { return requestAPI.get("/users/players", params); },
 
+  // Perfil público de cualquier usuario por id. Sin auth.
+  getUserProfile(id) { return requestAPI.get(`/users/${id}`); },
+
   // params opcional: { limit: int } — backend default 20, max 50
   getNews(params) { return requestAPI.get("/news", params); },
 

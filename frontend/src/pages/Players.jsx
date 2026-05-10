@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { routesAPI } from '../services/routesAPI';
 import Avatar from '../components/Avatar';
 import TeamLogo from '../components/TeamLogo';
+import UserNameLink from '../components/UserNameLink';
 
 const ROLE_FILTERS = ['all', 'Duelist', 'Controller', 'Initiator', 'Sentinel'];
 
@@ -171,7 +172,9 @@ const Players = () => {
                   <div className="flex justify-center mb-3">
                     <Avatar path={p.avatar} size="lg" />
                   </div>
-                  <div className="text-2xl font-tungsten text-white mb-1">{p.nickname}</div>
+                  <UserNameLink userId={p.id} className="text-2xl font-tungsten text-white mb-1 inline-block">
+                    {p.nickname}
+                  </UserNameLink>
                   {p.team ? (
                     <div className="flex items-center justify-center gap-2 text-valorant-light text-sm mb-4">
                       <TeamLogo path={p.team.team_logo} size="xs" />
@@ -225,7 +228,9 @@ const Players = () => {
                       <td className="p-4">
                         <div className="flex items-center gap-3">
                           <Avatar path={p.avatar} size="xs" />
-                          <span className="text-white font-bold">{p.nickname}</span>
+                          <UserNameLink userId={p.id} className="text-white font-bold">
+                            {p.nickname}
+                          </UserNameLink>
                         </div>
                       </td>
                       <td className="p-4">

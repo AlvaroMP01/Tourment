@@ -19,9 +19,9 @@ const TeamCard = ({ team, rank, highlightMetric }) => {
   const podium = rank && rank <= 3 ? RANK_COLORS[rank] : null;
 
   return (
-    <Link to={`/teams/${team.id}`} className="block">
+    <Link to={`/teams/${team.id}`} className="block h-full">
       <div
-        className={`card-valorant p-6 group hover:scale-105 transition-transform duration-300 ${
+        className={`card-valorant p-6 group hover:scale-105 transition-transform duration-300 h-full flex flex-col ${
           podium ? `border-t-4 ${podium.border} ${podium.glow}` : ''
         }`}
       >
@@ -43,7 +43,7 @@ const TeamCard = ({ team, rank, highlightMetric }) => {
           <div className="flex items-center space-x-4">
             <TeamLogo path={team.logo} size="md" className="group-hover:animate-glow" />
             <div>
-              <h3 className="text-2xl font-tungsten text-white tracking-wider">{team.name}</h3>
+              <h3 className="text-2xl font-tungsten text-white tracking-wider line-clamp-2 break-words min-h-[3.5rem]">{team.name}</h3>
               <p className="text-valorant-red font-bold">[{team.tag}]</p>
             </div>
           </div>
@@ -56,7 +56,7 @@ const TeamCard = ({ team, rank, highlightMetric }) => {
 
         <div className="divider-glow mb-4"></div>
 
-        <div className="bg-valorant-dark-tertiary p-4 clip-corner-sm space-y-2">
+        <div className="bg-valorant-dark-tertiary p-4 clip-corner-sm space-y-2 mt-auto">
           {showRecord && (
             <div className="flex justify-between items-center text-sm">
               <span className="text-valorant-light uppercase text-xs">Record (W-L)</span>

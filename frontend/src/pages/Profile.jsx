@@ -138,7 +138,7 @@ const Profile = () => {
 
               <form onSubmit={handleSubmit} className="space-y-6">
                 <div>
-                  <label className="block text-sm font-bold uppercase text-valorant-light mb-2">Nombre Visible</label>
+                  <label className="block text-sm font-bold uppercase text-valorant-light mb-2">Apodo</label>
                   <input
                     type="text"
                     name="custom_name"
@@ -146,6 +146,9 @@ const Profile = () => {
                     onChange={handleChange}
                     className="w-full bg-valorant-dark-secondary border border-valorant-dark-tertiary focus:border-valorant-red outline-none p-3 text-white transition-colors clip-corner-sm"
                   />
+                  <p className="text-xs text-valorant-light mt-2">
+                    Cómo quieres que te llamen los demás. Si lo dejas vacío, se mostrará tu nickname.
+                  </p>
                 </div>
                 <div>
                   <label className="block text-sm font-bold uppercase text-valorant-light mb-2">Bio</label>

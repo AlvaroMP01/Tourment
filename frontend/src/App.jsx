@@ -11,6 +11,7 @@ import Login from './pages/Login';
 import Register from './pages/Register';
 import MyTeams from './pages/MyTeams';
 import Profile from './pages/Profile';
+import PublicProfile from './pages/PublicProfile';
 import TeamDetail from './pages/TeamDetail';
 import { AuthProvider } from './context/AuthContext';
 import ProtectedRoute from './components/ProtectedRoute';
@@ -33,6 +34,7 @@ function App() {
             <Route path="/tournaments/:id" element={<TournamentDetail />} />
             <Route path="/teams" element={<Teams />} />
             <Route path="/players" element={<Players />} />
+            <Route path="/users/:id" element={<PublicProfile />} />
             <Route path="/news" element={<News />} />
             <Route path="/login" element={
               <PublicOnlyRoute>

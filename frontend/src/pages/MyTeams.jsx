@@ -5,6 +5,7 @@ import { routesAPI } from '../services/routesAPI';
 import Modal from '../components/Modal';
 import TeamLogo from '../components/TeamLogo';
 import ImageUploader from '../components/ImageUploader';
+import UserNameLink from '../components/UserNameLink';
 
 const ROLE_LABELS = {
   manager: 'Manager',
@@ -263,7 +264,9 @@ const MyTeams = () => {
                       {team.members.map(m => (
                         <div key={m.user_id} className="flex justify-between items-center bg-valorant-dark-tertiary p-2 px-3">
                           <div className="flex items-center gap-2">
-                            <span className="font-bold text-white text-sm">{m.nickname}</span>
+                            <UserNameLink userId={m.user_id} className="font-bold text-white text-sm">
+                              {m.nickname}
+                            </UserNameLink>
                             <span className="text-[10px] uppercase font-bold text-valorant-light">
                               {ROLE_LABELS[m.role] || m.role}
                             </span>
@@ -293,7 +296,9 @@ const MyTeams = () => {
                           {team.joinRequests.map(req => (
                             <div key={req.id} className="bg-valorant-dark-tertiary p-3 border-l-2 border-valorant-gold">
                               <div className="flex justify-between mb-2">
-                                <span className="font-bold text-white text-sm">{req.nickname}</span>
+                                <UserNameLink userId={req.user_id} className="font-bold text-white text-sm">
+                                  {req.nickname}
+                                </UserNameLink>
                                 <span className="text-xs text-valorant-light">
                                   {req.ingame_role}{req.favorite_agent ? ` · ${req.favorite_agent}` : ''}
                                 </span>

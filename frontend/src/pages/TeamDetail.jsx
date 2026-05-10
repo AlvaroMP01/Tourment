@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import { routesAPI } from '../services/routesAPI';
 import Modal from '../components/Modal';
 import TeamLogo from '../components/TeamLogo';
+import UserNameLink from '../components/UserNameLink';
 
 const ROLE_LABELS = {
   manager: 'Manager',
@@ -146,7 +147,9 @@ const TeamDetail = () => {
                 {founderMember && (
                   <>
                     <span>•</span>
-                    <span className="text-valorant-gold">Founder: {founderMember.nickname}</span>
+                    <span className="text-valorant-gold">
+                      Founder: <UserNameLink userId={founderMember.user_id} className="text-valorant-gold">{founderMember.nickname}</UserNameLink>
+                    </span>
                   </>
                 )}
               </div>
@@ -188,9 +191,11 @@ const TeamDetail = () => {
                     )}
                   </div>
                   <div className="mb-2">
-                    <h3 className="text-2xl font-tungsten uppercase tracking-wider text-white group-hover:text-valorant-red transition-colors">
-                      {m.nickname}
-                    </h3>
+                    <UserNameLink userId={m.user_id}>
+                      <h3 className="text-2xl font-tungsten uppercase tracking-wider text-white group-hover:text-valorant-red transition-colors">
+                        {m.nickname}
+                      </h3>
+                    </UserNameLink>
                     {m.ingame_role && (
                       <p className="text-sm text-valorant-light font-bold">
                         {m.ingame_role}{m.favorite_agent ? ` · ${m.favorite_agent}` : ''}
