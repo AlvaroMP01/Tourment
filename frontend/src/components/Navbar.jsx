@@ -38,7 +38,7 @@ const Navbar = () => {
               <img
                 src="/favicon.png"
                 alt="Tourment logo"
-                className="w-full h-full object-contain"
+                className="w-full h-full object-cover drop-shadow-[0_0_15px_#ff4655]"
               />
             </div>
             <div>
