@@ -21,7 +21,7 @@ const Home = () => {
         const [news, ts, tms] = await Promise.all([
           routesAPI.getNews({ limit: 6 }).catch(() => []),
           routesAPI.getTournaments().catch(() => []),
-          routesAPI.getTeams().catch(() => []),
+          routesAPI.getTeams({ sort_by: 'wins' }).catch(() => []),
         ]);
         if (cancelled) return;
         const realNews = (news || []).filter((n) => n?.title && n.title.length > 5 && n?.link);
@@ -42,10 +42,7 @@ const Home = () => {
     ...tournaments.filter((t) => t.status === 'upcoming'),
   ].slice(0, 3);
 
-  // Top teams: por cantidad de miembros desc, luego nombre. Hasta 3.
-  const topTeams = [...teams]
-    .sort((a, b) => (b.member_count || 0) - (a.member_count || 0) || a.name.localeCompare(b.name))
-    .slice(0, 3);
+  const topTeams = teams.slice(0, 3);
 
   return (
     <div className="min-h-screen bg-valorant-dark">

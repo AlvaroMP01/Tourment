@@ -52,13 +52,21 @@ Proyecto desarrollado como Trabajo de Fin de Grado por Álvaro Morcillo Pérez.
 ![Listado de torneos](docs/screenshots/tournaments.png)
 
 ### Detalle de torneo y bracket
-![Detalle de torneo con bracket](docs/screenshots/tournament-detail.png)
+![Detalle de torneo](docs/screenshots/tournament-detail.png)
+![Detalle de torneo con bracket](docs/screenshots/tournament-bracket.png)
+
+### Ranking de equipos
+![Ranking de equipos](docs/screenshots/teams-ranking.png)
 
 ### Ranking de jugadores
 ![Ranking de jugadores](docs/screenshots/players-ranking.png)
 
-### Panel de administración
+### Listado de noticias
+![Listado de noticias](docs/screenshots/news.png)
+
+### Panel de administración y de gestor de torneos
 ![Panel de administración](docs/screenshots/admin-panel.png)
+![Panel de gestor de torneos](docs/screenshots/tm-panel.png)
 
 ### Reporte de resultado de partido
 ![Reporte de partido](docs/screenshots/report-match.png)
