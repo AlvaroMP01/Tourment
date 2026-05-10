@@ -34,11 +34,11 @@ const Navbar = () => {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-20">
           <Link to="/" className="flex items-center space-x-3 group">
-            <div className="w-12 h-12 flex items-center justify-center group-hover:animate-glow transition-all">
+            <div className="w-12 h-12 flex items-center justify-center">
               <img
                 src="/favicon.png"
                 alt="Tourment logo"
-                className="w-full h-full object-cover drop-shadow-[0_0_15px_#ff4655]"
+                className="w-full h-full object-cover group-hover:drop-shadow-[0_0_15px_#ff4655] transition-all duration-300 group-hover:animate-glow"
               />
             </div>
             <div>
