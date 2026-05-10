@@ -218,7 +218,6 @@ El diseño es completamente responsive con breakpoints:
 ## 🚧 Futuras Mejoras
 
 - [ ] Autenticación de usuarios
-- [ ] Sistema de inscripción a torneos
 - [ ] Chat en vivo para partidos
 - [ ] Notificaciones push
 - [ ] Modo oscuro/claro

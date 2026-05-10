@@ -61,6 +61,9 @@ Proyecto desarrollado como Trabajo de Fin de Grado por Álvaro Morcillo Pérez.
 ### Ranking de jugadores
 ![Ranking de jugadores](docs/screenshots/players-ranking.png)
 
+### Detalle de jugador
+![Detalle de jugador](docs/screenshots/player-detail.png)
+
 ### Listado de noticias
 ![Listado de noticias](docs/screenshots/news.png)
 
