@@ -43,8 +43,6 @@ Proyecto desarrollado como Trabajo de Fin de Grado por Álvaro Morcillo Pérez.
 
 ## 2. Capturas de pantalla
 
-> Las capturas se mostrarán en esta sección. Sustituye los marcadores por las imágenes reales en `docs/screenshots/`.
-
 ### Página principal
 ![Home](docs/screenshots/home.png)
 
@@ -402,32 +400,17 @@ El proyecto está preparado para un despliegue en dos servicios: **Vercel** para
 3. Añade el plugin **MySQL**: Railway expone automáticamente las variables `MYSQL_*`.
 4. Configura las variables manuales:
    - `SECRET_KEY` (genera una con `python -c "import secrets; print(secrets.token_urlsafe(64))"`).
-   - `ALLOWED_ORIGINS` con el dominio público de Vercel (sin barra final).
+   - `ALLOWED_ORIGINS` con el dominio público de Vercel.
    - `FLASK_DEBUG=False`.
    - `ADMIN_PASSWORD` para poder ejecutar el seed.
 5. Crea un **Volume** montado en `/app/uploads` para que los avatares, logos e imágenes de torneo persistan entre reinicios y redespliegues.
-6. Aplica `schema.sql` desde la consola de Railway una sola vez:
-   ```bash
-   mysql -h $MYSQL_HOST -u $MYSQL_USER -p$MYSQL_PASSWORD $MYSQL_DATABASE < backend/schema.sql
-   ```
-7. Opcionalmente, ejecuta el seed:
-   ```bash
-   python seed.py
-   ```
+
 
 ### Frontend en Vercel
 
 1. Importa el repositorio en Vercel.
 2. Configura el **root directory** en `frontend/`.
-3. El framework `Vite` se detecta automáticamente. Build command: `npm run build`. Output directory: `dist`.
-4. Añade la variable de entorno:
-   - `VITE_BASE_URL` con el valor `https://<tu-app-railway>/api`.
-5. Tras el primer despliegue, copia la URL de Vercel y añádela a `ALLOWED_ORIGINS` en Railway.
-
-### Notas operativas
-
-- En producción se utiliza Gunicorn con dos workers. Railway respeta la variable `$PORT` automáticamente.
-- El rate-limit utiliza almacenamiento en memoria, suficiente para una sola instancia. Si en algún momento se escala horizontalmente, conviene migrar a Redis.
+3. Tras el primer despliegue, añáde la URL de Vercel a `ALLOWED_ORIGINS` en Railway.
 
 ---
 
