@@ -23,6 +23,13 @@ const STAT_FIELDS = [
 
 const PLAYABLE_ROLES = new Set(['player', 'player_coach']);
 
+const parseStrictInt = (v) => {
+  if (v === '' || v === null || v === undefined) return NaN;
+  const s = String(v).trim();
+  if (!/^-?\d+$/.test(s)) return NaN;
+  return parseInt(s, 10);
+};
+
 const AdminReportMatchModal = ({ tournamentId, match, teamsCatalog, isOpen, onClose, onReported }) => {
   const [team1, setTeam1] = useState(null);
   const [team2, setTeam2] = useState(null);
@@ -98,9 +105,11 @@ const AdminReportMatchModal = ({ tournamentId, match, teamsCatalog, isOpen, onCl
   };
 
   const validatePayload = () => {
-    const s1 = parseInt(scoreTeam1);
-    const s2 = parseInt(scoreTeam2);
-    if (Number.isNaN(s1) || Number.isNaN(s2)) return { error: 'Los scores son obligatorios' };
+    const s1 = parseStrictInt(scoreTeam1);
+    const s2 = parseStrictInt(scoreTeam2);
+    if (Number.isNaN(s1) || Number.isNaN(s2)) {
+      return { error: 'Los scores son obligatorios y deben ser enteros (sin decimales)' };
+    }
     if (s1 < 0 || s2 < 0) return { error: 'Los scores no pueden ser negativos' };
 
     const selected = Object.entries(playerStats).filter(([, v]) => v.selected);
@@ -115,21 +124,24 @@ const AdminReportMatchModal = ({ tournamentId, match, teamsCatalog, isOpen, onCl
           return { error: `Falta '${f.label}' para un jugador seleccionado` };
         }
       }
-      const k = parseInt(v.kills);
-      const d = parseInt(v.deaths);
-      const a = parseInt(v.assists);
-      const c = parseInt(v.clutches);
+      const k = parseStrictInt(v.kills);
+      const d = parseStrictInt(v.deaths);
+      const a = parseStrictInt(v.assists);
+      const c = parseStrictInt(v.clutches);
       const adr = parseFloat(v.adr);
       const hs = parseFloat(v.hs_percentage);
 
-      if ([k, d, a, c].some(n => Number.isNaN(n) || n < 0)) {
-        return { error: 'K/D/A/CL deben ser enteros >= 0' };
+      if ([k, d, a, c].some(n => Number.isNaN(n))) {
+        return { error: 'K/D/A/CL deben ser enteros (sin decimales)' };
+      }
+      if ([k, d, a, c].some(n => n < 0)) {
+        return { error: 'K/D/A/CL no pueden ser negativos' };
       }
       if (Number.isNaN(adr) || adr < 0) return { error: 'ADR debe ser numérico >= 0' };
       if (Number.isNaN(hs) || hs < 0 || hs > 100) return { error: 'HS% debe estar entre 0 y 100' };
 
       players.push({
-        user_id: parseInt(userId),
+        user_id: parseStrictInt(userId),
         kills: k, deaths: d, assists: a, clutches: c,
         adr, hs_percentage: hs,
       });
@@ -175,7 +187,7 @@ const AdminReportMatchModal = ({ tournamentId, match, teamsCatalog, isOpen, onCl
         <div>
           <label className="block text-xs font-bold uppercase text-valorant-light mb-1 text-right">Score</label>
           <input
-            type="number" min="0" required value={score}
+            type="number" min="0" step="1" required value={score}
             onChange={(e) => setScore(e.target.value)}
             className="w-24 bg-valorant-dark-secondary border border-valorant-dark focus:border-valorant-red outline-none p-2 text-white text-2xl font-tungsten text-center"
           />

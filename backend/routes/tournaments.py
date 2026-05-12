@@ -382,6 +382,28 @@ def _apply_player_stats_to_aggregate(user_stat: UserStat, kills, deaths, assists
     user_stat.matches_played = new_matches
 
 
+def _parse_strict_int(value):
+    if isinstance(value, bool):
+        raise ValueError("not int")
+    if isinstance(value, int):
+        return value
+    if isinstance(value, float):
+        if not value.is_integer():
+            raise ValueError("not int")
+        return int(value)
+    if isinstance(value, str):
+        s = value.strip()
+        if not s:
+            raise ValueError("empty")
+        sign = ''
+        if s[0] in '+-':
+            sign, s = s[0], s[1:]
+        if not s.isdigit():
+            raise ValueError("not int")
+        return int(f"{sign}{s}")
+    raise ValueError("not int")
+
+
 def _validate_player_stat_payload(p):
     """Valida y normaliza una entrada de stats de jugador. Devuelve (dict, None) o (None, error)."""
     required_int_fields = ('user_id', 'kills', 'deaths', 'assists', 'clutches')
@@ -389,9 +411,9 @@ def _validate_player_stat_payload(p):
         if f not in p:
             return None, f"Falta el campo '{f}' en una entrada de player stats"
         try:
-            p[f] = int(p[f])
+            p[f] = _parse_strict_int(p[f])
         except (TypeError, ValueError):
-            return None, f"'{f}' debe ser entero"
+            return None, f"'{f}' debe ser entero (sin decimales)"
         if p[f] < 0:
             return None, f"'{f}' no puede ser negativo"
 
@@ -433,10 +455,10 @@ def report_match_results(current_user, tournament_id, match_id):
     if 'score_team1' not in data or 'score_team2' not in data:
         return jsonify({"error": "score_team1 y score_team2 son obligatorios"}), 400
     try:
-        score1 = int(data['score_team1'])
-        score2 = int(data['score_team2'])
+        score1 = _parse_strict_int(data['score_team1'])
+        score2 = _parse_strict_int(data['score_team2'])
     except (TypeError, ValueError):
-        return jsonify({"error": "Los scores deben ser enteros"}), 400
+        return jsonify({"error": "Los scores deben ser enteros (sin decimales)"}), 400
     if score1 < 0 or score2 < 0:
         return jsonify({"error": "Los scores no pueden ser negativos"}), 400
 
